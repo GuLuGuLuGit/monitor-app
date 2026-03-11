@@ -42,14 +42,14 @@ final class DeviceListViewModel {
         errorMessage = nil
 
         do {
-            let result: [Device] = try await APIClient.shared.request(
+            let result: PagedData<Device> = try await APIClient.shared.request(
                 .devices,
                 queryItems: [
                     URLQueryItem(name: "page", value: "1"),
                     URLQueryItem(name: "page_size", value: "100"),
                 ]
             )
-            devices = result
+            devices = result.items
         } catch let error as APIError {
             errorMessage = error.errorDescription
         } catch {
