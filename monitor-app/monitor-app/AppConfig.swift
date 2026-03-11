@@ -2,11 +2,11 @@ import Foundation
 
 enum AppConfig {
     #if DEBUG
-    static let defaultBaseURL = "http://localhost:8080/api/v1"
-    static let defaultWSBaseURL = "ws://localhost:8080/api/v1"
+    static let defaultBaseURL = "https://monitor.ikanban.cn/api/v1"
+    static let defaultWSBaseURL = "wss://monitor.ikanban.cn/api/v1"
     #else
-    static let defaultBaseURL = "https://your-server.com/api/v1"
-    static let defaultWSBaseURL = "wss://your-server.com/api/v1"
+    static let defaultBaseURL = "https://monitor.ikanban.cn/api/v1"
+    static let defaultWSBaseURL = "wss://monitor.ikanban.cn/api/v1"
     #endif
 
     static var baseURL: String {
