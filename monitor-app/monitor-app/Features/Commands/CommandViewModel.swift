@@ -51,9 +51,13 @@ final class CommandViewModel {
             let commandData = CommandPayload(commandType: commandType.rawValue, params: params)
             let envelopeJson = try E2ECrypto.sealJSON(commandData, publicKeyPEM: publicKey)
 
+            let shouldPersistParams = (commandType == .message)
+            let persistedParams = shouldPersistParams ? params?.mapValues { AnyCodable($0) } : nil
+
             let request = CreateEncryptedCommandRequest(
                 deviceId: deviceId,
                 commandType: commandType.rawValue,
+                commandParams: persistedParams,
                 encryptedPayload: envelopeJson,
                 isEncrypted: true
             )
@@ -112,12 +116,14 @@ struct CommandPayload: Encodable {
 struct CreateEncryptedCommandRequest: Encodable {
     let deviceId: String
     let commandType: String
+    let commandParams: [String: AnyCodable]?
     let encryptedPayload: String
     let isEncrypted: Bool
 
     enum CodingKeys: String, CodingKey {
         case deviceId = "device_id"
         case commandType = "command_type"
+        case commandParams = "command_params"
         case encryptedPayload = "encrypted_payload"
         case isEncrypted = "is_encrypted"
     }

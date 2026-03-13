@@ -14,6 +14,8 @@ struct AgentChatView: View {
     @State private var isSending = false
     @State private var isLoadingHistory = false
     @State private var isRecording = false
+    @State private var unreadAgentIds: Set<String> = []
+    @State private var messageClient = AgentMessageClient()
 
     @State private var speechRecognizer: SFSpeechRecognizer?
     @State private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
@@ -64,6 +66,14 @@ struct AgentChatView: View {
             if agents.count == 1 {
                 selectAgent(agents[0])
             }
+            Task { await messageClient.connect(deviceId: deviceId) }
+        }
+        .onDisappear {
+            messageClient.disconnect()
+        }
+        .onChange(of: messageClient.latestEvent) { _, event in
+            guard let event else { return }
+            handleIncomingEvent(event)
         }
     }
 
@@ -102,14 +112,23 @@ struct AgentChatView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(agents) { agent in
+                    let online = isAgentOnline(agent)
                     Button { selectAgent(agent) } label: {
                         HStack(spacing: 6) {
                             Circle()
-                                .fill(agent.active == "true" ? AppColors.success : AppColors.disabled)
+                                .fill(online ? AppColors.success : AppColors.disabled)
                                 .frame(width: 6, height: 6)
                             Text(agent.name)
                                 .font(.caption)
                                 .fontWeight(.medium)
+                            Text(online ? "在线" : "离线")
+                                .font(.caption2)
+                                .foregroundStyle(online ? AppColors.success : AppColors.textSecondary)
+                            if unreadAgentIds.contains(agent.id) {
+                                Circle()
+                                    .fill(AppColors.error)
+                                    .frame(width: 6, height: 6)
+                            }
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
@@ -158,6 +177,7 @@ struct AgentChatView: View {
                 .onSubmit {
                     if !customAgentName.trimmingCharacters(in: .whitespaces).isEmpty {
                         let name = customAgentName.trimmingCharacters(in: .whitespaces)
+                        unreadAgentIds.remove(name)
                         Task { await loadHistory(agentId: name) }
                     }
                 }
@@ -167,6 +187,7 @@ struct AgentChatView: View {
                     let name = customAgentName.trimmingCharacters(in: .whitespaces)
                     if !name.isEmpty {
                         messages = []
+                        unreadAgentIds.remove(name)
                         Task { await loadHistory(agentId: name) }
                     }
                 } label: {
@@ -363,6 +384,7 @@ struct AgentChatView: View {
         customAgentName = ""
         messages = []
         inputText = ""
+        unreadAgentIds.remove(agent.id)
         Task { await loadHistory(agentId: agent.id) }
     }
 
@@ -416,6 +438,105 @@ struct AgentChatView: View {
         }
     }
 
+    private func handleIncomingEvent(_ event: AgentMessageEvent) {
+        guard event.deviceId == deviceId else { return }
+        let agentId = event.agentId.trimmingCharacters(in: .whitespaces)
+        guard !agentId.isEmpty else { return }
+
+        let isActive = activeAgent?.id == agentId
+        if isActive {
+            unreadAgentIds.remove(agentId)
+        }
+        if event.role == "assistant" {
+            let msg = ChatMessage(
+                id: "reply-\(event.commandId)",
+                role: .assistant,
+                content: event.content,
+                time: event.createdAt,
+                status: event.status,
+                inputType: .text
+            )
+            if isActive {
+                appendOrReplace(msg)
+                updateUserStatus(commandId: event.commandId, status: event.status)
+            } else {
+                unreadAgentIds.insert(agentId)
+            }
+        } else {
+            let inputType: ChatMessage.InputType = (event.inputType == "voice") ? .voice : .text
+            let msg = ChatMessage(
+                id: "user-\(event.commandId)",
+                role: .user,
+                content: event.content,
+                time: event.createdAt,
+                status: event.status,
+                inputType: inputType
+            )
+            if isActive {
+                if let idx = messages.firstIndex(where: { $0.id.hasPrefix("temp-") && $0.role == .user && $0.content == event.content }) {
+                    messages[idx] = msg
+                } else {
+                    appendOrReplace(msg)
+                }
+            } else {
+                unreadAgentIds.insert(agentId)
+            }
+        }
+    }
+
+    private func appendOrReplace(_ msg: ChatMessage) {
+        if let idx = messages.firstIndex(where: { $0.id == msg.id }) {
+            messages[idx] = msg
+        } else {
+            messages.append(msg)
+        }
+    }
+
+    private func updateUserStatus(commandId: Int64, status: Int8) {
+        let userId = "user-\(commandId)"
+        guard let idx = messages.firstIndex(where: { $0.id == userId }) else { return }
+        let old = messages[idx]
+        messages[idx] = ChatMessage(
+            id: old.id,
+            role: old.role,
+            content: old.content,
+            time: old.time,
+            status: status,
+            inputType: old.inputType
+        )
+    }
+
+    private func isAgentOnline(_ agent: OpenClawAgent) -> Bool {
+        guard let active = agent.active?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !active.isEmpty else { return false }
+        let lower = active.lowercased()
+        if ["true", "yes", "online", "active", "now"].contains(lower) {
+            return true
+        }
+        if let age = parseActiveAge(lower) {
+            return age <= 3600 // 1 hour
+        }
+        return false
+    }
+
+    private func parseActiveAge(_ value: String) -> TimeInterval? {
+        let parts = value.split(separator: " ")
+        guard let token = parts.first else { return nil }
+        let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let unit = trimmed.last else { return nil }
+        let numberStr = trimmed.dropLast()
+        guard let num = Double(numberStr) else { return nil }
+
+        switch unit {
+        case "s": return num
+        case "m": return num * 60
+        case "h": return num * 3600
+        case "d": return num * 86400
+        case "w": return num * 604800
+        default: return nil
+        }
+    }
+
     private func sendMessage(inputType: ChatMessage.InputType = .text) {
         let text = inputText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty, let agent = activeAgent else { return }
@@ -449,14 +570,30 @@ struct AgentChatView: View {
                 let request = CreateEncryptedCommandRequest(
                     deviceId: deviceId,
                     commandType: "openclaw_message",
+                    commandParams: params.mapValues { AnyCodable($0) },
                     encryptedPayload: envelopeJson,
                     isEncrypted: true
                 )
-                let _: AgentCommand = try await APIClient.shared.request(.createCommand, body: request)
+                let cmd: AgentCommand = try await APIClient.shared.request(.createCommand, body: request)
                 ToastManager.shared.success("消息已发送")
 
-                try? await Task.sleep(for: .seconds(2))
-                await loadHistory(agentId: agent.id)
+                await MainActor.run {
+                    if let idx = messages.firstIndex(where: { $0.id == tempMsg.id }) {
+                        messages[idx] = ChatMessage(
+                            id: "user-\(cmd.id)",
+                            role: .user,
+                            content: text,
+                            time: cmd.createdAt,
+                            status: cmd.status,
+                            inputType: inputType
+                        )
+                    }
+                }
+
+                if !messageClient.isConnected {
+                    try? await Task.sleep(for: .seconds(2))
+                    await loadHistory(agentId: agent.id)
+                }
             } catch {
                 ToastManager.shared.error("发送失败: \(error.localizedDescription)")
             }
