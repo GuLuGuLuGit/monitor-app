@@ -5,6 +5,33 @@ struct LoginRequest: Encodable {
     let password: String
 }
 
+struct RegisterRequest: Encodable {
+    let username: String
+    let email: String
+    let password: String
+    let code: String
+}
+
+struct SendCodeRequest: Encodable {
+    let email: String
+    let type: String
+}
+
+struct ResetPasswordRequest: Encodable {
+    let email: String
+    let code: String
+    let newPassword: String
+
+    enum CodingKeys: String, CodingKey {
+        case email, code
+        case newPassword = "new_password"
+    }
+}
+
+struct MessageResponse: Decodable {
+    let message: String
+}
+
 struct LoginResponse: Codable {
     let token: String
     let expiresAt: Date

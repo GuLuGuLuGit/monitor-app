@@ -5,7 +5,7 @@ struct LoadingOverlay: View {
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.4)
+            Color.white.opacity(0.3)
                 .ignoresSafeArea()
 
             VStack(spacing: 16) {
@@ -74,11 +74,11 @@ struct ErrorBanner: View {
             }
         }
         .padding()
-        .background(AppColors.error.opacity(0.15))
+        .background(AppColors.error.opacity(0.1))
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
-                .stroke(AppColors.error.opacity(0.3), lineWidth: 1)
+                .stroke(AppColors.error.opacity(0.25), lineWidth: 1)
         )
     }
 }

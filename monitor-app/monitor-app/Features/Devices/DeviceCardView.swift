@@ -6,7 +6,6 @@ struct DeviceCardView: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            // Device icon with status indicator
             ZStack(alignment: .bottomTrailing) {
                 Image(systemName: deviceIcon)
                     .font(.system(size: 28))
@@ -16,10 +15,10 @@ struct DeviceCardView: View {
                 Circle()
                     .fill(Color.deviceStatusColor(device.status))
                     .frame(width: 10, height: 10)
-                    .overlay(Circle().stroke(AppColors.bgPrimary, lineWidth: 2))
+                    .overlay(Circle().stroke(Color.white.opacity(0.8), lineWidth: 2))
+                    .shadow(color: Color.deviceStatusColor(device.status).opacity(0.5), radius: 3)
             }
 
-            // Device info
             VStack(alignment: .leading, spacing: 4) {
                 Text(device.hostname)
                     .font(.subheadline)
@@ -50,7 +49,6 @@ struct DeviceCardView: View {
 
             Spacer()
 
-            // Usage rings (if metric available)
             if let metric = latestMetric {
                 HStack(spacing: 8) {
                     UsageRing(value: metric.cpuUsage, label: "CPU", color: cpuColor(metric.cpuUsage), size: 36)

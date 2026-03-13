@@ -19,7 +19,7 @@ struct DeviceDetailView: View {
 
     var body: some View {
         ZStack {
-            AppColors.bgPrimary.ignoresSafeArea()
+            AppColors.gradientBg.ignoresSafeArea()
 
             if viewModel.isLoading && viewModel.device == nil {
                 ProgressView().tint(AppColors.primary)
@@ -30,6 +30,18 @@ struct DeviceDetailView: View {
                         CommandPanelView(device: currentDevice)
                         systemInfoCard
                         metricsChartCard
+
+                        if let info = viewModel.openClawInfo,
+                           (info.agents ?? []).isEmpty == false || info.overview?.agentsSummary != nil {
+                            AgentChatView(
+                                agents: info.agents ?? [],
+                                agentsSummary: info.overview?.agentsSummary,
+                                deviceId: currentDevice.deviceId,
+                                deviceInternalId: currentDevice.id
+                            )
+                        }
+
+                        skillsSection
                         openClawSection
                     }
                     .padding()
@@ -37,12 +49,12 @@ struct DeviceDetailView: View {
                 .refreshable {
                     await viewModel.load()
                     await viewModel.loadMetrics()
+                    await viewModel.loadSkills()
                 }
             }
         }
         .navigationTitle(currentDevice.hostname)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -82,6 +94,7 @@ struct DeviceDetailView: View {
         .task {
             await viewModel.load()
             await viewModel.loadMetrics()
+            await viewModel.loadSkills()
             viewModel.startAutoRefresh()
         }
         .onDisappear {
@@ -105,6 +118,7 @@ struct DeviceDetailView: View {
                 Image(systemName: "laptopcomputer")
                     .font(.system(size: 40))
                     .foregroundStyle(AppColors.primary)
+                    .shadow(color: AppColors.primary.opacity(0.2), radius: 6)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(currentDevice.hostname)
@@ -253,6 +267,71 @@ struct DeviceDetailView: View {
         }
     }
 
+    // MARK: - Skills Section
+
+    @ViewBuilder
+    private var skillsSection: some View {
+        if !viewModel.skills.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "bolt.fill")
+                        .foregroundStyle(AppColors.warning)
+                    Text("Skills")
+                        .font(.headline)
+                        .foregroundStyle(AppColors.textTitle)
+                    Spacer()
+                    Text("\(viewModel.skills.count) / \(viewModel.skillTotal)")
+                        .font(.caption)
+                        .foregroundStyle(AppColors.textSecondary)
+                }
+
+                FlowLayout(spacing: 8) {
+                    ForEach(viewModel.skills) { skill in
+                        skillTag(skill)
+                    }
+                }
+            }
+            .padding()
+            .cardStyle()
+        }
+    }
+
+    private func skillTag(_ skill: SkillItem) -> some View {
+        let colors = skillPalette(for: skill.skillName)
+        return HStack(spacing: 4) {
+            Text(skill.skillName)
+                .font(.caption2)
+                .fontWeight(.medium)
+            if let ver = skill.skillVersion, !ver.isEmpty {
+                Text(ver)
+                    .font(.system(size: 9))
+                    .opacity(0.7)
+            }
+        }
+        .foregroundStyle(colors.fg)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(colors.bg)
+        .clipShape(Capsule())
+    }
+
+    private func skillPalette(for name: String) -> (bg: Color, fg: Color) {
+        let palettes: [(Color, Color)] = [
+            (Color(hex: "5b8def").opacity(0.15), Color(hex: "5b8def")),
+            (Color(hex: "00e676").opacity(0.15), Color(hex: "00c853")),
+            (Color(hex: "8b5cf6").opacity(0.15), Color(hex: "8b5cf6")),
+            (Color(hex: "f59e0b").opacity(0.15), Color(hex: "d97706")),
+            (Color(hex: "22d3ee").opacity(0.15), Color(hex: "0891b2")),
+            (Color(hex: "ec4899").opacity(0.15), Color(hex: "db2777")),
+            (Color(hex: "f87171").opacity(0.15), Color(hex: "dc2626")),
+            (Color(hex: "4ade80").opacity(0.15), Color(hex: "16a34a")),
+        ]
+        var h = 0
+        for c in name.unicodeScalars { h = ((h &<< 5) &- h) &+ Int(c.value) }
+        let idx = abs(h) % palettes.count
+        return (palettes[idx].0, palettes[idx].1)
+    }
+
     // MARK: - OpenClaw Section
 
     @ViewBuilder
@@ -323,6 +402,7 @@ struct DeviceDetailView: View {
                     Circle()
                         .fill(agent.active == "true" ? AppColors.success : AppColors.textSecondary)
                         .frame(width: 6, height: 6)
+                        .shadow(color: agent.active == "true" ? AppColors.success.opacity(0.4) : .clear, radius: 3)
                     Text(agent.name)
                         .font(.caption)
                         .foregroundStyle(AppColors.textPrimary)

@@ -10,14 +10,16 @@ struct ContentView: View {
             if isCheckingAuth {
                 splashView
             } else if !authManager.isAuthenticated {
-                LoginView()
+                NavigationStack {
+                    LoginView()
+                }
             } else if biometric.isLocked {
                 lockScreen
             } else {
                 MainTabView()
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .task {
             await authManager.checkAuthState()
             if authManager.isAuthenticated {
@@ -31,12 +33,13 @@ struct ContentView: View {
 
     private var splashView: some View {
         ZStack {
-            AppColors.bgPrimary.ignoresSafeArea()
+            AppColors.gradientBg.ignoresSafeArea()
 
             VStack(spacing: 16) {
                 Image(systemName: "antenna.radiowaves.left.and.right.circle.fill")
                     .font(.system(size: 56))
                     .foregroundStyle(AppColors.gradientPrimary)
+                    .shadow(color: AppColors.primary.opacity(0.3), radius: 12)
 
                 ProgressView()
                     .tint(AppColors.primary)
@@ -46,12 +49,13 @@ struct ContentView: View {
 
     private var lockScreen: some View {
         ZStack {
-            AppColors.bgPrimary.ignoresSafeArea()
+            AppColors.gradientBg.ignoresSafeArea()
 
             VStack(spacing: 24) {
                 Image(systemName: "lock.fill")
                     .font(.system(size: 48))
                     .foregroundStyle(AppColors.primary)
+                    .shadow(color: AppColors.primary.opacity(0.3), radius: 12)
 
                 Text("OpenClaw 已锁定")
                     .font(.title3)
@@ -71,6 +75,7 @@ struct ContentView: View {
                     .padding(.vertical, 14)
                     .background(AppColors.gradientPrimary)
                     .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+                    .shadow(color: AppColors.primary.opacity(0.3), radius: 8)
                 }
             }
         }

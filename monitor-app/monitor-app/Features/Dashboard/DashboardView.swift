@@ -6,7 +6,7 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppColors.bgPrimary.ignoresSafeArea()
+                AppColors.gradientBg.ignoresSafeArea()
 
                 if viewModel.isLoading && viewModel.dashboardData == nil {
                     ProgressView()
@@ -27,7 +27,6 @@ struct DashboardView: View {
             }
             .navigationTitle("Dashboard")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarColorScheme(.dark, for: .navigationBar)
         }
         .task {
             await viewModel.load()

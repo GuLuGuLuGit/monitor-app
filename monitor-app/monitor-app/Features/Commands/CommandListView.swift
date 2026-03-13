@@ -7,7 +7,7 @@ struct CommandListView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppColors.bgPrimary.ignoresSafeArea()
+                AppColors.gradientBg.ignoresSafeArea()
 
                 if viewModel.isLoading && viewModel.commands.isEmpty {
                     ProgressView().tint(AppColors.primary)
@@ -32,7 +32,6 @@ struct CommandListView: View {
             }
             .navigationTitle("命令")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .sheet(item: $selectedCommand) { command in
                 CommandDetailSheet(command: command)
             }
@@ -95,11 +94,10 @@ struct CommandDetailSheet: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppColors.bgPrimary.ignoresSafeArea()
+                AppColors.gradientBg.ignoresSafeArea()
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        // Status header
                         HStack {
                             Text(command.commandTypeEnum?.label ?? command.commandType)
                                 .font(.title2)
@@ -109,7 +107,6 @@ struct CommandDetailSheet: View {
                             StatusBadge.commandStatus(command.status)
                         }
 
-                        // Info grid
                         VStack(spacing: 8) {
                             detailRow("设备", String(command.deviceId.prefix(12)) + "...")
                             detailRow("创建者", command.createdBy)
@@ -122,7 +119,6 @@ struct CommandDetailSheet: View {
                         .padding()
                         .cardStyle()
 
-                        // Result
                         if !command.result.isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("执行结果")
@@ -137,12 +133,11 @@ struct CommandDetailSheet: View {
                                 }
                                 .padding()
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color.black.opacity(0.3))
+                                .background(.ultraThinMaterial)
                                 .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
                             }
                         }
 
-                        // Error
                         if !command.errorMessage.isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("错误信息")
@@ -155,7 +150,7 @@ struct CommandDetailSheet: View {
                                     .textSelection(.enabled)
                                     .padding()
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(AppColors.error.opacity(0.1))
+                                    .background(AppColors.error.opacity(0.08))
                                     .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
                             }
                         }
@@ -165,7 +160,6 @@ struct CommandDetailSheet: View {
             }
             .navigationTitle("命令详情")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("关闭") { dismiss() }

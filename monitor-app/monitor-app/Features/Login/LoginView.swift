@@ -8,18 +8,17 @@ struct LoginView: View {
 
     var body: some View {
         ZStack {
-            AppColors.bgPrimary.ignoresSafeArea()
+            AppColors.gradientBg.ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: 32) {
                     Spacer().frame(height: 60)
 
-                    // Logo & Title
                     VStack(spacing: 12) {
                         Image(systemName: "antenna.radiowaves.left.and.right.circle.fill")
                             .font(.system(size: 64))
                             .foregroundStyle(AppColors.gradientPrimary)
-                            .shadow(color: AppColors.primary.opacity(0.4), radius: 20)
+                            .shadow(color: AppColors.primary.opacity(0.3), radius: 16)
 
                         Text("OpenClaw")
                             .font(.system(size: 32, weight: .bold, design: .rounded))
@@ -30,9 +29,7 @@ struct LoginView: View {
                             .foregroundStyle(AppColors.textSecondary)
                     }
 
-                    // Form
                     VStack(spacing: 20) {
-                        // Error banner
                         if let error = viewModel.errorMessage {
                             ErrorBanner(message: error) {
                                 viewModel.errorMessage = nil
@@ -40,7 +37,6 @@ struct LoginView: View {
                             .transition(.move(edge: .top).combined(with: .opacity))
                         }
 
-                        // Username
                         VStack(alignment: .leading, spacing: 6) {
                             Text("用户名")
                                 .font(.caption)
@@ -61,18 +57,17 @@ struct LoginView: View {
                                     .onSubmit { focusedField = .password }
                             }
                             .padding()
-                            .background(AppColors.bgCard)
+                            .background(.ultraThinMaterial)
                             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
                             .overlay(
                                 RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
                                     .stroke(
-                                        focusedField == .username ? AppColors.primary : AppColors.borderColor,
+                                        focusedField == .username ? AppColors.primary.opacity(0.6) : AppColors.borderColor,
                                         lineWidth: 1
                                     )
                             )
                         }
 
-                        // Password
                         VStack(alignment: .leading, spacing: 6) {
                             Text("密码")
                                 .font(.caption)
@@ -91,18 +86,17 @@ struct LoginView: View {
                                     .onSubmit { Task { await viewModel.login() } }
                             }
                             .padding()
-                            .background(AppColors.bgCard)
+                            .background(.ultraThinMaterial)
                             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
                             .overlay(
                                 RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
                                     .stroke(
-                                        focusedField == .password ? AppColors.primary : AppColors.borderColor,
+                                        focusedField == .password ? AppColors.primary.opacity(0.6) : AppColors.borderColor,
                                         lineWidth: 1
                                     )
                             )
                         }
 
-                        // Remember me
                         Toggle(isOn: $viewModel.rememberLogin) {
                             Text("记住登录")
                                 .font(.subheadline)
@@ -110,7 +104,6 @@ struct LoginView: View {
                         }
                         .tint(AppColors.primary)
 
-                        // Login button
                         Button {
                             Task { await viewModel.login() }
                         } label: {
@@ -133,9 +126,21 @@ struct LoginView: View {
                             )
                             .foregroundStyle(.white)
                             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
-                            .shadow(color: viewModel.isFormValid ? AppColors.primary.opacity(0.4) : .clear, radius: 12)
+                            .shadow(color: viewModel.isFormValid ? AppColors.primary.opacity(0.3) : .clear, radius: 10)
                         }
                         .disabled(!viewModel.isFormValid || viewModel.isLoading)
+
+                        HStack {
+                            NavigationLink("注册账号", destination: RegisterView())
+                                .font(.subheadline)
+                                .foregroundStyle(AppColors.primary)
+
+                            Spacer()
+
+                            NavigationLink("忘记密码", destination: ForgotPasswordView())
+                                .font(.subheadline)
+                                .foregroundStyle(AppColors.primary)
+                        }
                     }
                     .padding(24)
                     .cardStyle()

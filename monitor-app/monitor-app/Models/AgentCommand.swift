@@ -50,12 +50,42 @@ extension AgentCommand {
         }
     }
 
+    enum CommandGroup: String, CaseIterable {
+        case control
+        case diagnose
+        case manage
+
+        var label: String {
+            switch self {
+            case .control: "服务控制"
+            case .diagnose: "诊断与查询"
+            case .manage: "运维管理"
+            }
+        }
+
+        var types: [CommandType] {
+            switch self {
+            case .control: [.start, .stop, .restart, .gateway]
+            case .diagnose: [.status, .doctor, .probe, .logs]
+            case .manage: [.config, .update, .sessions, .security]
+            }
+        }
+    }
+
     enum CommandType: String, CaseIterable {
         case start = "openclaw_start"
         case stop = "openclaw_stop"
         case restart = "openclaw_restart"
         case status = "openclaw_status"
         case config = "openclaw_config"
+        case doctor = "openclaw_doctor"
+        case update = "openclaw_update"
+        case logs = "openclaw_logs"
+        case probe = "openclaw_probe"
+        case sessions = "openclaw_sessions"
+        case security = "openclaw_security"
+        case gateway = "openclaw_gateway"
+        case message = "openclaw_message"
 
         var label: String {
             switch self {
@@ -64,6 +94,14 @@ extension AgentCommand {
             case .restart: "重启"
             case .status: "状态"
             case .config: "配置"
+            case .doctor: "诊断"
+            case .update: "更新"
+            case .logs: "日志"
+            case .probe: "连通性"
+            case .sessions: "会话"
+            case .security: "安全"
+            case .gateway: "Gateway"
+            case .message: "消息"
             }
         }
 
@@ -74,6 +112,23 @@ extension AgentCommand {
             case .restart: "arrow.clockwise.circle.fill"
             case .status: "info.circle.fill"
             case .config: "gearshape.fill"
+            case .doctor: "stethoscope"
+            case .update: "arrow.up.circle.fill"
+            case .logs: "doc.text.fill"
+            case .probe: "antenna.radiowaves.left.and.right"
+            case .sessions: "bubble.left.and.bubble.right.fill"
+            case .security: "shield.checkered"
+            case .gateway: "globe"
+            case .message: "message.fill"
+            }
+        }
+
+        var needsParams: Bool {
+            switch self {
+            case .gateway, .logs, .update, .sessions, .security, .config, .message:
+                return true
+            default:
+                return false
             }
         }
     }

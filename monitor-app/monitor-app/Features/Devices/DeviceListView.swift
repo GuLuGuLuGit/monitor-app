@@ -28,11 +28,10 @@ struct DeviceListView: View {
     private var iPadLayout: some View {
         NavigationSplitView {
             ZStack {
-                AppColors.bgPrimary.ignoresSafeArea()
+                AppColors.gradientBg.ignoresSafeArea()
                 sidebarContent
             }
             .navigationTitle("设备")
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .searchable(text: $viewModel.searchText, prompt: "搜索设备...")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -45,7 +44,7 @@ struct DeviceListView: View {
             .sheet(isPresented: $showPairing) { PairingView() }
         } detail: {
             ZStack {
-                AppColors.bgPrimary.ignoresSafeArea()
+                AppColors.gradientBg.ignoresSafeArea()
                 if let device = selectedDevice {
                     DeviceDetailView(device: device)
                 } else {
@@ -117,7 +116,7 @@ struct DeviceListView: View {
     private var iPhoneLayout: some View {
         NavigationStack {
             ZStack {
-                AppColors.bgPrimary.ignoresSafeArea()
+                AppColors.gradientBg.ignoresSafeArea()
 
                 if viewModel.isLoading && viewModel.devices.isEmpty {
                     ProgressView().tint(AppColors.primary)
@@ -135,7 +134,6 @@ struct DeviceListView: View {
             }
             .navigationTitle("设备")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .searchable(text: $viewModel.searchText, prompt: "搜索设备...")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { pairingButton }
@@ -202,22 +200,42 @@ struct DeviceListView: View {
             Button {
                 viewModel.statusFilter = nil
             } label: {
-                Label("全部", systemImage: viewModel.statusFilter == nil ? "checkmark" : "")
+                HStack {
+                    Text("全部")
+                    if viewModel.statusFilter == nil {
+                        Image(systemName: "checkmark")
+                    }
+                }
             }
             Button {
                 viewModel.statusFilter = 1
             } label: {
-                Label("在线", systemImage: viewModel.statusFilter == 1 ? "checkmark" : "")
+                HStack {
+                    Text("在线")
+                    if viewModel.statusFilter == 1 {
+                        Image(systemName: "checkmark")
+                    }
+                }
             }
             Button {
                 viewModel.statusFilter = 0
             } label: {
-                Label("离线", systemImage: viewModel.statusFilter == 0 ? "checkmark" : "")
+                HStack {
+                    Text("离线")
+                    if viewModel.statusFilter == 0 {
+                        Image(systemName: "checkmark")
+                    }
+                }
             }
             Button {
                 viewModel.statusFilter = -1
             } label: {
-                Label("禁用", systemImage: viewModel.statusFilter == -1 ? "checkmark" : "")
+                HStack {
+                    Text("禁用")
+                    if viewModel.statusFilter == -1 {
+                        Image(systemName: "checkmark")
+                    }
+                }
             }
         } label: {
             Image(systemName: "line.3.horizontal.decrease.circle")

@@ -8,7 +8,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppColors.bgPrimary.ignoresSafeArea()
+                AppColors.gradientBg.ignoresSafeArea()
 
                 List {
                     profileSection
@@ -22,7 +22,6 @@ struct SettingsView: View {
             }
             .navigationTitle("设置")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarColorScheme(.dark, for: .navigationBar)
         }
     }
 
@@ -35,6 +34,7 @@ struct SettingsView: View {
                     Circle()
                         .fill(AppColors.gradientPrimary)
                         .frame(width: 50, height: 50)
+                        .shadow(color: AppColors.primary.opacity(0.3), radius: 6)
                     Text(String((AuthManager.shared.currentAdmin?.nickname ?? "A").prefix(1)))
                         .font(.title2)
                         .fontWeight(.bold)
@@ -55,13 +55,13 @@ struct SettingsView: View {
                             .foregroundStyle(AppColors.primary)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(AppColors.primary.opacity(0.15))
+                            .background(AppColors.primary.opacity(0.12))
                             .clipShape(Capsule())
                     }
                 }
             }
             .padding(.vertical, 4)
-            .listRowBackground(AppColors.bgCard)
+            .listRowBackground(Color.white.opacity(0.35))
         }
     }
 
@@ -85,7 +85,7 @@ struct SettingsView: View {
                     }
                 }
                 .tint(AppColors.primary)
-                .listRowBackground(AppColors.bgCard)
+                .listRowBackground(Color.white.opacity(0.35))
             }
 
             Label {
@@ -100,7 +100,7 @@ struct SettingsView: View {
                 Image(systemName: "lock.shield.fill")
                     .foregroundStyle(AppColors.success)
             }
-            .listRowBackground(AppColors.bgCard)
+            .listRowBackground(Color.white.opacity(0.35))
         }
     }
 
@@ -126,7 +126,7 @@ struct SettingsView: View {
                         .monospaced()
                 }
             }
-            .listRowBackground(AppColors.bgCard)
+            .listRowBackground(Color.white.opacity(0.35))
 
             Button {
                 AppConfig.baseURL = serverURL
@@ -139,7 +139,7 @@ struct SettingsView: View {
                 .font(.subheadline)
                 .foregroundStyle(AppColors.primary)
             }
-            .listRowBackground(AppColors.bgCard)
+            .listRowBackground(Color.white.opacity(0.35))
         }
     }
 
@@ -163,7 +163,7 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundStyle(AppColors.textSecondary)
         }
-        .listRowBackground(AppColors.bgCard)
+        .listRowBackground(Color.white.opacity(0.35))
     }
 
     // MARK: - Logout
@@ -181,7 +181,7 @@ struct SettingsView: View {
                     Spacer()
                 }
             }
-            .listRowBackground(AppColors.error.opacity(0.15))
+            .listRowBackground(AppColors.error.opacity(0.12))
             .alert("确认退出", isPresented: $showLogoutConfirm) {
                 Button("取消", role: .cancel) {}
                 Button("退出", role: .destructive) {

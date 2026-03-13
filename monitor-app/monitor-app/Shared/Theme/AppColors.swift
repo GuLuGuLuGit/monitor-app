@@ -25,37 +25,49 @@ extension Color {
 }
 
 enum AppColors {
-    static let bgPrimary = Color(hex: "060a1a")
-    static let bgCard = Color(.sRGB, red: 16/255, green: 23/255, blue: 42/255, opacity: 0.85)
-    static let bgCardHover = Color(.sRGB, red: 22/255, green: 32/255, blue: 56/255, opacity: 0.95)
+    // MARK: - Backgrounds (Glassmorphism Light)
+    static let bgPrimary = Color(hex: "e8f0fc")
+    static let bgSecondary = Color(hex: "dfe8f8")
+    static let bgCard = Color(.sRGB, red: 255/255, green: 255/255, blue: 255/255, opacity: 0.45)
+    static let bgCardHover = Color(.sRGB, red: 255/255, green: 255/255, blue: 255/255, opacity: 0.6)
+    static let bgGlass = Color(.sRGB, red: 255/255, green: 255/255, blue: 255/255, opacity: 0.3)
 
-    static let borderColor = Color(.sRGB, red: 56/255, green: 96/255, blue: 176/255, opacity: 0.2)
-    static let borderGlow = Color(.sRGB, red: 56/255, green: 136/255, blue: 255/255, opacity: 0.35)
+    // MARK: - Borders
+    static let borderColor = Color(.sRGB, red: 255/255, green: 255/255, blue: 255/255, opacity: 0.5)
+    static let borderGlow = Color(.sRGB, red: 120/255, green: 180/255, blue: 255/255, opacity: 0.5)
 
-    static let success = Color(hex: "00e5a0")
-    static let warning = Color(hex: "ffb340")
-    static let error = Color(hex: "ff4d6a")
-    static let disabled = Color(hex: "5a5e70")
+    // MARK: - Accent Colors (Neon)
+    static let success = Color(hex: "00e676")
+    static let warning = Color(hex: "ffab40")
+    static let error = Color(hex: "ff5277")
+    static let disabled = Color(hex: "b0b8c9")
 
-    static let primary = Color(hex: "3b82f6")
+    static let primary = Color(hex: "5b8def")
     static let cyan = Color(hex: "22d3ee")
 
-    static let textPrimary = Color(hex: "e2e8f0")
-    static let textSecondary = Color(hex: "7a8ba8")
-    static let textTitle = Color(hex: "f1f5f9")
+    // MARK: - Text (Dark on Light)
+    static let textPrimary = Color(hex: "3a4560")
+    static let textSecondary = Color(hex: "8595b0")
+    static let textTitle = Color(hex: "1e2a3e")
 
+    // MARK: - Gradients
     static let gradientPrimary = LinearGradient(
-        colors: [Color(hex: "3b82f6"), Color(hex: "22d3ee")],
+        colors: [Color(hex: "5b8def"), Color(hex: "22d3ee")],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
     static let gradientSuccess = LinearGradient(
-        colors: [Color(hex: "00e5a0"), Color(hex: "22d3ee")],
+        colors: [Color(hex: "00e676"), Color(hex: "22d3ee")],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
     static let gradientError = LinearGradient(
-        colors: [Color(hex: "ff4d6a"), Color(hex: "ff8a65")],
+        colors: [Color(hex: "ff5277"), Color(hex: "ffa07a")],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    static let gradientBg = LinearGradient(
+        colors: [Color(hex: "e8f0fc"), Color(hex: "d6e4f7"), Color(hex: "e0ecff")],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )

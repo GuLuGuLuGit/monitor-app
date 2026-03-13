@@ -8,7 +8,7 @@ struct TaskProgressView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppColors.bgPrimary.ignoresSafeArea()
+                AppColors.gradientBg.ignoresSafeArea()
 
                 ScrollView {
                     VStack(spacing: 20) {
@@ -21,13 +21,13 @@ struct TaskProgressView: View {
             }
             .navigationTitle("任务进度")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 8) {
                         Circle()
                             .fill(client.isConnected ? AppColors.success : AppColors.error)
                             .frame(width: 8, height: 8)
+                            .shadow(color: (client.isConnected ? AppColors.success : AppColors.error).opacity(0.4), radius: 3)
                         Button("关闭") { dismiss() }
                             .foregroundStyle(AppColors.primary)
                     }
@@ -108,11 +108,11 @@ struct TaskProgressView: View {
 
                 ForEach(Array(client.progressHistory.enumerated()), id: \.element.id) { index, progress in
                     HStack(alignment: .top, spacing: 12) {
-                        // Timeline indicator
                         VStack(spacing: 0) {
                             Circle()
                                 .fill(stepColor(progress))
                                 .frame(width: 10, height: 10)
+                                .shadow(color: stepColor(progress).opacity(0.3), radius: 3)
 
                             if index < client.progressHistory.count - 1 {
                                 Rectangle()
@@ -194,7 +194,7 @@ struct TaskProgressView: View {
 
     private var placeholderThumbnail: some View {
         RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
-            .fill(AppColors.bgCard)
+            .fill(AppColors.bgGlass)
             .frame(width: 160, height: 100)
             .overlay(
                 Image(systemName: "photo")

@@ -11,7 +11,7 @@ struct PairingView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AppColors.bgPrimary.ignoresSafeArea()
+                AppColors.gradientBg.ignoresSafeArea()
 
                 if let device = pairedDeviceInfo {
                     successView(device)
@@ -21,7 +21,6 @@ struct PairingView: View {
             }
             .navigationTitle("添加设备")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("取消") { dismiss() }
@@ -39,6 +38,7 @@ struct PairingView: View {
                 Image(systemName: "link.badge.plus")
                     .font(.system(size: 48))
                     .foregroundStyle(AppColors.gradientPrimary)
+                    .shadow(color: AppColors.primary.opacity(0.25), radius: 12)
 
                 Text("输入配对码")
                     .font(.title2)
@@ -51,7 +51,6 @@ struct PairingView: View {
                     .multilineTextAlignment(.center)
             }
 
-            // 6-character code input
             VStack(spacing: 16) {
                 HStack(spacing: 8) {
                     ForEach(0..<6, id: \.self) { index in
@@ -62,20 +61,20 @@ struct PairingView: View {
                             .font(.system(size: 28, weight: .bold, design: .monospaced))
                             .foregroundStyle(AppColors.textTitle)
                             .frame(width: 44, height: 56)
-                            .background(AppColors.bgCard)
+                            .background(.ultraThinMaterial)
                             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
                             .overlay(
                                 RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
                                     .stroke(
-                                        index == pairingCode.count ? AppColors.primary : AppColors.borderColor,
+                                        index == pairingCode.count ? AppColors.primary.opacity(0.6) : AppColors.borderColor,
                                         lineWidth: index == pairingCode.count ? 2 : 1
                                     )
                             )
+                            .shadow(color: AppTheme.neumorphicShadow.opacity(0.3), radius: 3, x: 2, y: 2)
                     }
                 }
                 .onTapGesture { isFocused = true }
 
-                // Hidden text field for actual input
                 TextField("", text: $pairingCode)
                     .focused($isFocused)
                     .textInputAutocapitalization(.characters)
@@ -115,6 +114,7 @@ struct PairingView: View {
                 )
                 .foregroundStyle(.white)
                 .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
+                .shadow(color: pairingCode.count == 6 ? AppColors.primary.opacity(0.3) : .clear, radius: 8)
             }
             .disabled(pairingCode.count != 6 || isSubmitting)
             .padding(.horizontal)
@@ -132,7 +132,7 @@ struct PairingView: View {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 64))
                 .foregroundStyle(AppColors.success)
-                .shadow(color: AppColors.success.opacity(0.4), radius: 16)
+                .shadow(color: AppColors.success.opacity(0.35), radius: 16)
 
             Text("配对成功!")
                 .font(.title2)
@@ -162,6 +162,7 @@ struct PairingView: View {
                     .background(AppColors.gradientPrimary)
                     .foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
+                    .shadow(color: AppColors.primary.opacity(0.3), radius: 8)
             }
             .padding(.horizontal)
 

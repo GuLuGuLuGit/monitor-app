@@ -40,6 +40,11 @@ final class AuthManager {
         isAuthenticated = true
     }
 
+    func setAuthenticated(admin: AdminInfo) {
+        currentAdmin = admin
+        isAuthenticated = true
+    }
+
     func logout() async {
         await KeychainStore.shared.clearAll()
         currentAdmin = nil

@@ -7,6 +7,9 @@ enum HTTPMethod: String {
 enum APIEndpoint {
     // Auth
     case login
+    case register
+    case sendCode
+    case resetPassword
     case refreshToken
     case me
 
@@ -33,6 +36,9 @@ enum APIEndpoint {
     case taskProgress(id: Int64)
     case taskProgressLatest(id: Int64)
 
+    // Skills
+    case skills
+
     // Pairing
     case pairingConfirm
 
@@ -42,6 +48,9 @@ enum APIEndpoint {
     var path: String {
         switch self {
         case .login:                    "/admin/auth/login"
+        case .register:                 "/admin/auth/register"
+        case .sendCode:                 "/admin/auth/send-code"
+        case .resetPassword:            "/admin/auth/reset-password"
         case .refreshToken:             "/admin/auth/refresh"
         case .me:                       "/admin/auth/me"
         case .dashboard:                "/admin/dashboard"
@@ -57,6 +66,7 @@ enum APIEndpoint {
         case .taskStats:                "/admin/tasks/stats"
         case .taskProgress(let id):     "/admin/tasks/\(id)/progress"
         case .taskProgressLatest(let id): "/admin/tasks/\(id)/progress/latest"
+        case .skills:                   "/admin/skills"
         case .pairingConfirm:           "/admin/pairing/confirm"
         case .registerPushToken:        "/admin/devices/push-token"
         }
@@ -64,7 +74,7 @@ enum APIEndpoint {
 
     var method: HTTPMethod {
         switch self {
-        case .login, .refreshToken, .createCommand, .pairingConfirm, .registerPushToken:
+        case .login, .register, .sendCode, .resetPassword, .refreshToken, .createCommand, .pairingConfirm, .registerPushToken:
             .POST
         case .deviceStatus:
             .PUT

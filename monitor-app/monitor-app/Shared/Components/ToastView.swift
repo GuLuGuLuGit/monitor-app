@@ -89,10 +89,8 @@ struct ToastOverlay: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                .background(
-                    AppColors.bgCardHover
-                        .overlay(toast.type.color.opacity(0.08))
-                )
+                .background(.ultraThinMaterial)
+                .background(toast.type.color.opacity(0.06))
                 .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
                 .overlay(
                     RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
