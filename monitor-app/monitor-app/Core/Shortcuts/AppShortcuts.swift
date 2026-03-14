@@ -9,8 +9,8 @@ struct CheckDeviceStatusIntent: AppIntent {
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         do {
-            let dashboard: DashboardData = try await APIClient.shared.request(.dashboard)
-            let s = dashboard.deviceSummary
+            let overview: DeviceWorkspaceOverview = try await APIClient.shared.request(.dashboard)
+            let s = overview.deviceSummary
             return .result(
                 dialog: "共 \(s.total) 台设备，\(s.online) 台在线，\(s.offline) 台离线。"
             )

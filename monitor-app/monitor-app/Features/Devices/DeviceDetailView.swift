@@ -48,7 +48,7 @@ struct DeviceDetailView: View {
     }
 
     private var latestMetric: SystemMetric? {
-        viewModel.metrics.max(by: { $0.metricTime < $1.metricTime })
+        viewModel.metrics.max(by: { $0.metricTime < $1.metricTime }) ?? currentDevice.latestMetric
     }
 
     var body: some View {

@@ -1,10 +1,10 @@
 import Foundation
 
-struct DashboardData: Codable {
-    let deviceSummary: DeviceSummary
-    let metricsSummary: MetricsSummary
-    let skillsSummary: SkillsSummary
-    let logsSummary: LogsSummary
+struct DeviceWorkspaceOverview: Codable {
+    let deviceSummary: DeviceWorkspaceDeviceSummary
+    let metricsSummary: DeviceWorkspaceMetricsSummary
+    let skillsSummary: DeviceWorkspaceSkillsSummary
+    let logsSummary: DeviceWorkspaceLogsSummary
     let recentDevices: [Device]
 
     enum CodingKeys: String, CodingKey {
@@ -16,14 +16,14 @@ struct DashboardData: Codable {
     }
 }
 
-struct DeviceSummary: Codable {
+struct DeviceWorkspaceDeviceSummary: Codable {
     let total: Int64
     let online: Int64
     let offline: Int64
     let disabled: Int64
 }
 
-struct MetricsSummary: Codable {
+struct DeviceWorkspaceMetricsSummary: Codable {
     let totalRecords: Int64
     let todayRecords: Int64
     let avgCpuUsage: Double
@@ -39,7 +39,7 @@ struct MetricsSummary: Codable {
     }
 }
 
-struct SkillsSummary: Codable {
+struct DeviceWorkspaceSkillsSummary: Codable {
     let totalSkills: Int64
     let enabledSkills: Int64
     let disabledSkills: Int64
@@ -51,7 +51,7 @@ struct SkillsSummary: Codable {
     }
 }
 
-struct LogsSummary: Codable {
+struct DeviceWorkspaceLogsSummary: Codable {
     let totalLogs: Int64
     let todayLogs: Int64
     let errorLogs: Int64

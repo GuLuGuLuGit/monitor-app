@@ -18,6 +18,7 @@ struct Device: Codable, Identifiable {
     let createdAt: Date?
     let updatedAt: Date?
     let extraData: String?
+    let latestMetric: SystemMetric?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -37,6 +38,7 @@ struct Device: Codable, Identifiable {
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case extraData = "extra_data"
+        case latestMetric = "latest_metric"
     }
 }
 

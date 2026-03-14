@@ -90,16 +90,13 @@ struct MainTabView: View {
 
     var body: some View {
         TabView(selection: $router.selectedTab) {
-            Tab("Dashboard", systemImage: "square.grid.2x2.fill", value: 0) {
-                DashboardView()
-            }
-            Tab("设备", systemImage: "desktopcomputer", value: 1) {
+            Tab("设备", systemImage: "desktopcomputer", value: 0) {
                 DeviceListView()
             }
-            Tab("命令", systemImage: "terminal.fill", value: 2) {
+            Tab("命令", systemImage: "terminal.fill", value: 1) {
                 CommandListView()
             }
-            Tab("设置", systemImage: "gearshape.fill", value: 3) {
+            Tab("设置", systemImage: "gearshape.fill", value: 2) {
                 SettingsView()
             }
         }

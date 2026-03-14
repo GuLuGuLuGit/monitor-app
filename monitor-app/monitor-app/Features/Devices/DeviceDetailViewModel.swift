@@ -78,7 +78,7 @@ final class DeviceDetailViewModel {
         formatter.formatOptions = [.withInternetDateTime]
 
         do {
-            let result: [SystemMetric] = try await APIClient.shared.request(
+            let result: PagedData<SystemMetric> = try await APIClient.shared.request(
                 .metrics,
                 queryItems: [
                     URLQueryItem(name: "device_id", value: "\(deviceId)"),
@@ -88,9 +88,10 @@ final class DeviceDetailViewModel {
                     URLQueryItem(name: "page_size", value: "288"),
                 ]
             )
-            metrics = result.sorted { $0.metricTime < $1.metricTime }
+            metrics = result.items.sorted { $0.metricTime < $1.metricTime }
         } catch {
-            // Metrics are non-critical, just skip
+            metrics = []
+            print("[DeviceDetail] load metrics failed for device \(deviceId): \(error)")
         }
     }
 

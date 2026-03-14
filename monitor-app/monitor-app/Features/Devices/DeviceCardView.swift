@@ -5,6 +5,10 @@ struct DeviceCardView: View {
     var latestMetric: SystemMetric? = nil
     var unreadCount: Int = 0
 
+    private var effectiveLatestMetric: SystemMetric? {
+        latestMetric ?? device.latestMetric
+    }
+
     private var openClawInfo: OpenClawInfo? {
         OpenClawInfo.parse(from: device.extraData)
     }
@@ -84,7 +88,7 @@ struct DeviceCardView: View {
             }
 
             VStack(spacing: 10) {
-                if let metric = latestMetric, device.isOnline {
+                if let metric = effectiveLatestMetric, device.isOnline {
                     usageRow(title: "CPU", usage: metric.cpuUsage, detail: "\(device.cpuModel) · \(device.cpuCores) 核")
                     usageRow(title: "内存", usage: metric.memoryUsage, detail: "\(formattedBytes(metric.memoryUsed)) / \(device.formattedMemory)")
                     usageRow(title: "磁盘", usage: metric.diskUsage, detail: "\(formattedBytes(metric.diskUsed)) / \(device.formattedDisk)")

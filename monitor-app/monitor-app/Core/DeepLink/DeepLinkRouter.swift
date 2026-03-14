@@ -4,7 +4,6 @@ import Observation
 enum DeepLink: Equatable {
     case device(id: String)
     case command(id: Int64)
-    case dashboard
     case pairing
 
     static func from(notification userInfo: [AnyHashable: Any]) -> DeepLink? {
@@ -40,15 +39,13 @@ final class DeepLinkRouter {
     func handle(_ deepLink: DeepLink) {
         switch deepLink {
         case .device:
-            selectedTab = 1
+            selectedTab = 0
             pendingDeepLink = deepLink
         case .command:
-            selectedTab = 2
-            pendingDeepLink = deepLink
-        case .dashboard:
-            selectedTab = 0
-        case .pairing:
             selectedTab = 1
+            pendingDeepLink = deepLink
+        case .pairing:
+            selectedTab = 0
             pendingDeepLink = deepLink
         }
     }

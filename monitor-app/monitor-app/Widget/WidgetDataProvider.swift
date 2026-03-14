@@ -42,9 +42,9 @@ actor WidgetDataFetcher {
         }
 
         do {
-            let dashboard: DashboardData = try await APIClient.shared.request(.dashboard)
-            let summary = dashboard.deviceSummary
-            let devices = dashboard.recentDevices.prefix(5).map { device in
+            let overview: DeviceWorkspaceOverview = try await APIClient.shared.request(.dashboard)
+            let summary = overview.deviceSummary
+            let devices = overview.recentDevices.prefix(5).map { device in
                 WidgetDeviceItem(hostname: device.hostname, status: device.status, lastSeen: device.lastHeartbeatAt)
             }
 
