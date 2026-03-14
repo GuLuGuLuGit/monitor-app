@@ -41,36 +41,26 @@ struct CommandPanelView: View {
                 }
             }
 
-            if let msg = viewModel.successMessage {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(AppColors.success)
-                    Text(msg)
-                        .font(.caption)
-                        .foregroundStyle(AppColors.success)
-                }
-                .padding(.horizontal, 4)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-
             if let error = viewModel.errorMessage {
                 ErrorBanner(message: error) {
                     viewModel.errorMessage = nil
                 }
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: viewModel.successMessage)
         .alert("确认执行", isPresented: $showConfirm) {
             Button("取消", role: .cancel) { pendingCommand = nil; pendingParams = nil }
             Button("确认") {
                 guard let cmd = pendingCommand else { return }
                 Task {
-                    await viewModel.sendCommand(
+                    let success = await viewModel.sendCommand(
                         deviceId: device.deviceId,
                         deviceInternalId: device.id,
                         commandType: cmd,
                         params: pendingParams
                     )
+                    if success {
+                        ToastManager.shared.show(.success, message: "\(cmd.label)已发送", duration: 2)
+                    }
                 }
                 pendingCommand = nil
                 pendingParams = nil

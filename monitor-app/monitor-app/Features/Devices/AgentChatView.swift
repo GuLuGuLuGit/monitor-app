@@ -141,10 +141,16 @@ struct AgentChatView: View {
                                 .fontWeight(.semibold)
                                 .foregroundStyle(selectedAgent?.id == agent.id ? AppColors.primary : AppColors.textPrimary)
                                 .lineLimit(1)
-                            Text(agent.id)
+                            Text(agent.sessionModel ?? agent.id)
                                 .font(.caption2)
                                 .foregroundStyle(AppColors.textSecondary)
                                 .lineLimit(1)
+                            if let sessionTokens = agent.sessionTokens, !sessionTokens.isEmpty {
+                                Text(sessionTokens)
+                                    .font(.caption2)
+                                    .foregroundStyle(AppColors.textSecondary)
+                                    .lineLimit(1)
+                            }
                             HStack(spacing: 6) {
                                 statusCapsule(text: online ? "在线" : "离线", color: online ? AppColors.success : AppColors.disabled)
                                 if let sessions = agent.sessions {

@@ -38,7 +38,9 @@ extension OpenClawInfo {
                 let active = a["active"] as? String
                 let bootstrap = a["bootstrap"] as? String
                 let agentOnline = a["agent_online"] as? Bool
-                agents.append(OpenClawAgent(id: id, name: name, sessions: sessions, active: active, bootstrap: bootstrap, agentOnline: agentOnline))
+                let sessionModel = a["session_model"] as? String
+                let sessionTokens = a["session_tokens"] as? String
+                agents.append(OpenClawAgent(id: id, name: name, sessions: sessions, active: active, bootstrap: bootstrap, sessionModel: sessionModel, sessionTokens: sessionTokens, agentOnline: agentOnline))
             }
         }
 
@@ -141,6 +143,8 @@ extension OpenClawInfo {
             else if let s = item["sessions"] as? String, let n = Int(s) { sessions = n }
             let active = item["active"] as? String
             let bootstrap = item["bootstrap"] as? String
+            let sessionModel = item["session_model"] as? String
+            let sessionTokens = item["session_tokens"] as? String
             let agentOnline = item["agent_online"] as? Bool
             return OpenClawAgent(
                 id: id,
@@ -148,6 +152,8 @@ extension OpenClawInfo {
                 sessions: sessions,
                 active: active,
                 bootstrap: bootstrap,
+                sessionModel: sessionModel,
+                sessionTokens: sessionTokens,
                 agentOnline: agentOnline
             )
         }
@@ -184,14 +190,18 @@ struct OpenClawAgent: Codable, Identifiable {
     let sessions: Int?
     let active: String?
     let bootstrap: String?
+    let sessionModel: String?
+    let sessionTokens: String?
     let agentOnline: Bool?
 
-    init(id: String, name: String, sessions: Int? = nil, active: String? = nil, bootstrap: String? = nil, agentOnline: Bool? = nil) {
+    init(id: String, name: String, sessions: Int? = nil, active: String? = nil, bootstrap: String? = nil, sessionModel: String? = nil, sessionTokens: String? = nil, agentOnline: Bool? = nil) {
         self.id = id
         self.name = name
         self.sessions = sessions
         self.active = active
         self.bootstrap = bootstrap
+        self.sessionModel = sessionModel
+        self.sessionTokens = sessionTokens
         self.agentOnline = agentOnline
     }
 
@@ -209,11 +219,15 @@ struct OpenClawAgent: Codable, Identifiable {
         }
         active = try? container.decode(String.self, forKey: .active)
         bootstrap = try? container.decode(String.self, forKey: .bootstrap)
+        sessionModel = try? container.decode(String.self, forKey: .sessionModel)
+        sessionTokens = try? container.decode(String.self, forKey: .sessionTokens)
         agentOnline = try? container.decode(Bool.self, forKey: .agentOnline)
     }
 
     enum CodingKeys: String, CodingKey {
         case id, name, sessions, active, bootstrap
+        case sessionModel = "session_model"
+        case sessionTokens = "session_tokens"
         case agentOnline = "agent_online"
     }
 }

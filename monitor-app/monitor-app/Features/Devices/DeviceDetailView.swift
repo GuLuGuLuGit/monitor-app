@@ -52,8 +52,6 @@ struct DeviceDetailView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 18) {
-                        heroCard
-                        summaryStrip
                         tabBar
                         workspaceContent
                     }
@@ -126,121 +124,24 @@ struct DeviceDetailView: View {
         } catch {}
     }
 
-    private var heroCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top, spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(AppColors.primary.opacity(0.12))
-                        .frame(width: 56, height: 56)
-                    Image(systemName: "laptopcomputer")
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(AppColors.primary)
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("设备")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(AppColors.textSecondary)
-                    Text(currentDevice.hostname)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(AppColors.textTitle)
-                    HStack(spacing: 8) {
-                        StatusBadge.deviceStatus(currentDevice.status)
-                        pill(text: "心跳 \(currentDevice.lastHeartbeatAt?.relativeString ?? "--")")
-                    }
-                }
-                Spacer()
-            }
-
-            HStack(spacing: 8) {
-                pill(text: "OpenClaw \(openClawInfo?.overview?.version ?? currentDevice.agentVersion)")
-                if let model = openClawInfo?.model, !model.isEmpty {
-                    pill(text: model)
-                }
-                if !agentList.isEmpty {
-                    pill(text: "\(agentList.count) Agents")
-                }
-            }
-        }
-        .padding(20)
-        .cardStyle()
-    }
-
-    private var summaryStrip: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            summaryCard(
-                title: "设备状态",
-                value: currentDevice.deviceStatus == .online ? "在线" : (currentDevice.deviceStatus == .disabled ? "禁用" : "离线"),
-                detail: "最近心跳 \(currentDevice.lastHeartbeatAt?.relativeString ?? "--")",
-                accent: currentDevice.isOnline ? AppColors.success : AppColors.error
-            )
-            summaryCard(
-                title: "OpenClaw",
-                value: openClawInfo?.overview?.version ?? currentDevice.agentVersion,
-                detail: openClawInfo?.model ?? "待模型",
-                accent: AppColors.primary
-            )
-            summaryCard(
-                title: "Agents",
-                value: "\(agentList.count)",
-                detail: agentList.isEmpty ? (openClawInfo?.overview?.agentsSummary ?? "待上报") : "\(onlineAgentCount) 在线",
-                accent: AppColors.cyan
-            )
-            summaryCard(
-                title: "运行时间",
-                value: uptimeString(from: currentDevice.registeredAt),
-                detail: "注册于 \(formattedDate(currentDevice.registeredAt))",
-                accent: AppColors.warning
-            )
-        }
-    }
-
-    private func summaryCard(title: String, value: String, detail: String, accent: Color) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(accent)
-                    .frame(width: 8, height: 8)
-                Text(title)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(AppColors.textSecondary)
-            }
-            Text(value)
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundStyle(accent)
-            Text(detail)
-                .font(.caption)
-                .foregroundStyle(AppColors.textSecondary)
-                .lineLimit(2)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .cardStyle()
-    }
-
     private var tabBar: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             ForEach(WorkspaceTab.allCases, id: \.self) { tab in
                 Button {
                     selectedTab = tab
                 } label: {
-                    Label(tab.rawValue, systemImage: tab.icon)
-                        .font(.subheadline)
+                    Text(tab.rawValue)
+                        .font(.caption)
                         .fontWeight(.semibold)
-                    .foregroundStyle(selectedTab == tab ? AppColors.primary : AppColors.textPrimary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(14)
-                    .background(selectedTab == tab ? AppColors.primary.opacity(0.12) : Color.white.opacity(0.28))
-                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
-                            .stroke(selectedTab == tab ? AppColors.primary.opacity(0.25) : AppColors.borderColor, lineWidth: 1)
-                    )
+                        .foregroundStyle(selectedTab == tab ? AppColors.primary : AppColors.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(selectedTab == tab ? AppColors.primary.opacity(0.1) : Color.white.opacity(0.18))
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(selectedTab == tab ? AppColors.primary.opacity(0.18) : AppColors.borderColor, lineWidth: 1)
+                        )
                 }
                 .buttonStyle(.plain)
             }
@@ -262,6 +163,7 @@ struct DeviceDetailView: View {
     private var statusWorkspace: some View {
         VStack(spacing: 16) {
             metricsChartCard
+            skillsCard
 
             technicalDetails
         }
@@ -403,12 +305,6 @@ struct DeviceDetailView: View {
                         }
                     }
 
-                    if !viewModel.skills.isEmpty {
-                        DisclosureGroup("Skills") {
-                            skillsSection
-                                .padding(.top, 10)
-                        }
-                    }
                 }
                 .padding(.top, 12)
             } label: {
@@ -428,7 +324,7 @@ struct DeviceDetailView: View {
     }
 
     private var shouldShowTechnicalDetails: Bool {
-        openClawInfo != nil || !viewModel.skills.isEmpty
+        openClawInfo != nil
     }
 
     private var systemInfoCard: some View {
@@ -438,7 +334,7 @@ struct DeviceDetailView: View {
                 ("Node ID", currentDevice.nodeId ?? "—"),
                 ("系统版本", currentDevice.osVersion),
                 ("Agent 版本", currentDevice.agentVersion),
-                ("CPU", currentDevice.cpuModel),
+                ("CPU", currentDevice.formattedCPU),
                 ("内存", currentDevice.formattedMemory),
                 ("磁盘", currentDevice.formattedDisk),
                 ("注册时间", formattedDate(currentDevice.registeredAt)),
@@ -569,13 +465,32 @@ struct DeviceDetailView: View {
     }
 
     @ViewBuilder
+    private var skillsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Skills")
+                    .font(.headline)
+                    .foregroundStyle(AppColors.textTitle)
+                Spacer()
+                Text(viewModel.skills.isEmpty ? "无 Skills" : "\(viewModel.skills.count) / \(viewModel.skillTotal)")
+                    .font(.caption)
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+
+            if viewModel.skills.isEmpty {
+                emptyHint("无 Skills")
+            } else {
+                skillsSection
+            }
+        }
+        .padding(20)
+        .cardStyle()
+    }
+
+    @ViewBuilder
     private var skillsSection: some View {
         if !viewModel.skills.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
-                Text("\(viewModel.skills.count) / \(viewModel.skillTotal)")
-                    .font(.caption)
-                    .foregroundStyle(AppColors.textSecondary)
-
                 FlowLayout(spacing: 8) {
                     ForEach(viewModel.skills) { skill in
                         skillTag(skill)
@@ -641,9 +556,14 @@ struct DeviceDetailView: View {
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundStyle(AppColors.textPrimary)
-                Text(agent.id)
+                Text(agent.sessionModel ?? agent.id)
                     .font(.caption2)
                     .foregroundStyle(AppColors.textSecondary)
+                if let tokens = agent.sessionTokens, !tokens.isEmpty {
+                    Text(tokens)
+                        .font(.caption2)
+                        .foregroundStyle(AppColors.textSecondary)
+                }
             }
 
             Spacer()
@@ -719,16 +639,6 @@ struct DeviceDetailView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm"
         return formatter.string(from: date)
-    }
-
-    private func uptimeString(from date: Date) -> String {
-        let interval = Date().timeIntervalSince(date)
-        let days = Int(interval / 86400)
-        let hours = Int(interval.truncatingRemainder(dividingBy: 86400) / 3600)
-        let minutes = Int(interval.truncatingRemainder(dividingBy: 3600) / 60)
-        if days > 0 { return "\(days)d \(hours)h" }
-        if hours > 0 { return "\(hours)h \(minutes)m" }
-        return "\(minutes)m"
     }
 
     private func formattedBytes(_ bytes: Int64) -> String {

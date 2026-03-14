@@ -55,11 +55,20 @@ extension Device {
 
     var isOnline: Bool { status == 1 }
 
+    var formattedCPU: String {
+        let model = cpuModel.trimmingCharacters(in: .whitespacesAndNewlines)
+        let coreText = cpuCores > 0 ? "\(cpuCores) 核" : nil
+        let parts = [model.isEmpty ? nil : model, coreText].compactMap { $0 }
+        return parts.isEmpty ? "--" : parts.joined(separator: " · ")
+    }
+
     var formattedMemory: String {
-        ByteCountFormatter.string(fromByteCount: memoryTotal, countStyle: .memory)
+        guard memoryTotal > 0 else { return "--" }
+        return ByteCountFormatter.string(fromByteCount: memoryTotal, countStyle: .memory)
     }
 
     var formattedDisk: String {
-        ByteCountFormatter.string(fromByteCount: diskTotal, countStyle: .file)
+        guard diskTotal > 0 else { return "--" }
+        return ByteCountFormatter.string(fromByteCount: diskTotal, countStyle: .file)
     }
 }

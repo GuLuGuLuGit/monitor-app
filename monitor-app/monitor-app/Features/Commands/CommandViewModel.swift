@@ -8,7 +8,6 @@ final class CommandViewModel {
     private(set) var isLoading = false
     private(set) var isSending = false
     var errorMessage: String?
-    var successMessage: String?
 
     var filterDeviceId: String? = nil
 
@@ -42,7 +41,6 @@ final class CommandViewModel {
     func sendCommand(deviceId: String, deviceInternalId: UInt, commandType: AgentCommand.CommandType, params: [String: Any]? = nil) async -> Bool {
         isSending = true
         errorMessage = nil
-        successMessage = nil
         defer { isSending = false }
 
         do {
@@ -63,7 +61,6 @@ final class CommandViewModel {
             )
 
             let _: AgentCommand = try await APIClient.shared.request(.createCommand, body: request)
-            successMessage = "已发送 \(commandType.label)"
             await loadCommands(deviceId: deviceId)
             return true
         } catch let error as APIError {

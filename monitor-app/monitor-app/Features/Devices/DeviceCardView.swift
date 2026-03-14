@@ -21,12 +21,6 @@ struct DeviceCardView: View {
         (openClawInfo?.agents ?? []).filter(isAgentOnline).count
     }
 
-    private var gatewaySummary: String {
-        guard let raw = openClawInfo?.overview?.gateway, !raw.isEmpty else { return "待网关" }
-        let short = raw.count > 12 ? "\(raw.prefix(12))..." : raw
-        return "Gateway \(short)"
-    }
-
     private var priority: (label: String, color: Color) {
         if device.status != 1 { return ("异常", AppColors.error) }
         if agentCount == 0 || onlineAgentCount == 0 { return ("关注", AppColors.warning) }
@@ -57,7 +51,7 @@ struct DeviceCardView: View {
                         .fontWeight(.semibold)
                         .foregroundStyle(AppColors.textPrimary)
                         .lineLimit(1)
-                    Text("\(device.deviceId) · \(device.osVersion)")
+                    Text(device.osVersion)
                         .font(.caption2)
                         .foregroundStyle(AppColors.textSecondary)
                         .lineLimit(1)
@@ -80,12 +74,11 @@ struct DeviceCardView: View {
 
             HStack(spacing: 8) {
                 statusChip("心跳 \(device.lastHeartbeatAt?.relativeString ?? "暂无")", color: device.isOnline ? AppColors.success : AppColors.disabled)
-                statusChip(gatewaySummary, color: device.isOnline ? AppColors.primary : AppColors.disabled)
             }
 
             VStack(spacing: 10) {
                 if let metric = effectiveLatestMetric, device.isOnline {
-                    usageRow(title: "CPU", usage: metric.cpuUsage, detail: "\(device.cpuModel) · \(device.cpuCores) 核")
+                    usageRow(title: "CPU", usage: metric.cpuUsage, detail: device.formattedCPU)
                     usageRow(title: "内存", usage: metric.memoryUsage, detail: "\(formattedBytes(metric.memoryUsed)) / \(device.formattedMemory)")
                     usageRow(title: "磁盘", usage: metric.diskUsage, detail: "\(formattedBytes(metric.diskUsed)) / \(device.formattedDisk)")
                 } else {

@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SettingsView: View {
+    private let topContentSpacing: CGFloat = 8
     @State private var serverURL = AppConfig.baseURL
     @State private var biometric = BiometricAuth.shared
     @State private var showLogoutConfirm = false
@@ -19,9 +20,12 @@ struct SettingsView: View {
                 }
                 .scrollContentBackground(.hidden)
                 .listSectionSpacing(12)
+                .safeAreaInset(edge: .top) {
+                    Color.clear.frame(height: topContentSpacing)
+                }
             }
             .navigationTitle("设置")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 
@@ -33,10 +37,10 @@ struct SettingsView: View {
                 ZStack {
                     Circle()
                         .fill(AppColors.gradientPrimary)
-                        .frame(width: 50, height: 50)
+                        .frame(width: 42, height: 42)
                         .shadow(color: AppColors.primary.opacity(0.3), radius: 6)
                     Text(String((AuthManager.shared.currentAdmin?.nickname ?? "A").prefix(1)))
-                        .font(.title2)
+                        .font(.title3)
                         .fontWeight(.bold)
                         .foregroundStyle(.white)
                 }
@@ -60,8 +64,10 @@ struct SettingsView: View {
                     }
                 }
             }
-            .padding(.vertical, 4)
-            .listRowBackground(Color.white.opacity(0.35))
+            .frame(minHeight: AppTheme.topModuleMinHeight, alignment: .leading)
+            .padding(.vertical, 2)
+            .listRowBackground(settingsRowBackground())
+            .listRowInsets(EdgeInsets(top: 8, leading: AppTheme.pageHorizontalPadding, bottom: 8, trailing: AppTheme.pageHorizontalPadding))
         }
     }
 
@@ -85,7 +91,7 @@ struct SettingsView: View {
                     }
                 }
                 .tint(AppColors.primary)
-                .listRowBackground(Color.white.opacity(0.35))
+                .listRowBackground(settingsRowBackground())
             }
 
             Label {
@@ -100,7 +106,7 @@ struct SettingsView: View {
                 Image(systemName: "lock.shield.fill")
                     .foregroundStyle(AppColors.success)
             }
-            .listRowBackground(Color.white.opacity(0.35))
+            .listRowBackground(settingsRowBackground())
         }
     }
 
@@ -126,7 +132,7 @@ struct SettingsView: View {
                         .monospaced()
                 }
             }
-            .listRowBackground(Color.white.opacity(0.35))
+            .listRowBackground(settingsRowBackground())
 
             Button {
                 AppConfig.baseURL = serverURL
@@ -139,7 +145,7 @@ struct SettingsView: View {
                 .font(.subheadline)
                 .foregroundStyle(AppColors.primary)
             }
-            .listRowBackground(Color.white.opacity(0.35))
+            .listRowBackground(settingsRowBackground())
         }
     }
 
@@ -163,7 +169,7 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundStyle(AppColors.textSecondary)
         }
-        .listRowBackground(Color.white.opacity(0.35))
+        .listRowBackground(settingsRowBackground())
     }
 
     // MARK: - Logout
@@ -181,7 +187,7 @@ struct SettingsView: View {
                     Spacer()
                 }
             }
-            .listRowBackground(AppColors.error.opacity(0.12))
+            .listRowBackground(settingsRowBackground(AppColors.error.opacity(0.12)))
             .alert("确认退出", isPresented: $showLogoutConfirm) {
                 Button("取消", role: .cancel) {}
                 Button("退出", role: .destructive) {
@@ -191,5 +197,10 @@ struct SettingsView: View {
                 Text("退出后需要重新登录才能使用。")
             }
         }
+    }
+
+    private func settingsRowBackground(_ color: Color = Color.white.opacity(0.35)) -> some View {
+        RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+            .fill(color)
     }
 }

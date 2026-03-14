@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct DeviceListView: View {
+    private let topContentSpacing: CGFloat = 8
     @State private var viewModel = DeviceListViewModel()
     @State private var showPairing = false
     @State private var selectedDevice: Device?
@@ -111,6 +112,7 @@ struct DeviceListView: View {
                 sidebarWorkspace
             }
             .navigationTitle("设备")
+            .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $viewModel.searchText, prompt: "搜索设备...")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { pairingButton }
@@ -136,7 +138,9 @@ struct DeviceListView: View {
                 filterStrip
                 deviceSectionContent(useButtons: true)
             }
-            .padding()
+            .padding(.horizontal, AppTheme.pageHorizontalPadding)
+            .padding(.vertical, 16)
+            .padding(.top, topContentSpacing)
         }
         .refreshable { await viewModel.load() }
     }
@@ -167,13 +171,15 @@ struct DeviceListView: View {
                                 deviceSectionContent(useButtons: false)
                             }
                         }
-                        .padding()
+                        .padding(.horizontal, AppTheme.pageHorizontalPadding)
+                        .padding(.vertical, 16)
+                        .padding(.top, topContentSpacing)
                     }
                     .refreshable { await viewModel.load() }
                 }
             }
             .navigationTitle("设备")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $viewModel.searchText, prompt: "搜索设备...")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { pairingButton }

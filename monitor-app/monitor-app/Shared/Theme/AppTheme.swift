@@ -4,6 +4,8 @@ enum AppTheme {
     static let cornerRadius: CGFloat = 20
     static let cornerRadiusSmall: CGFloat = 12
     static let cornerRadiusLarge: CGFloat = 28
+    static let pageHorizontalPadding: CGFloat = 16
+    static let topModuleMinHeight: CGFloat = 52
 
     static let neumorphicLight = Color.white.opacity(0.8)
     static let neumorphicShadow = Color(.sRGB, red: 166/255, green: 180/255, blue: 210/255, opacity: 0.35)
