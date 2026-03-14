@@ -6,6 +6,8 @@ struct AgentChatView: View {
     let agentsSummary: String?
     let deviceId: String
     let deviceInternalId: UInt
+    let initialAgentId: String?
+    let showAgentSelector: Bool
 
     @State private var selectedAgent: OpenClawAgent?
     @State private var customAgentName = ""
@@ -29,6 +31,22 @@ struct AgentChatView: View {
     @FocusState private var isInputFocused: Bool
     @FocusState private var isAgentNameFocused: Bool
 
+    init(
+        agents: [OpenClawAgent],
+        agentsSummary: String?,
+        deviceId: String,
+        deviceInternalId: UInt,
+        initialAgentId: String? = nil,
+        showAgentSelector: Bool = true
+    ) {
+        self.agents = agents
+        self.agentsSummary = agentsSummary
+        self.deviceId = deviceId
+        self.deviceInternalId = deviceInternalId
+        self.initialAgentId = initialAgentId
+        self.showAgentSelector = showAgentSelector
+    }
+
     private var hasAgents: Bool { !agents.isEmpty }
 
     private var activeAgent: (id: String, name: String)? {
@@ -47,10 +65,10 @@ struct AgentChatView: View {
             header
             Divider().background(AppColors.borderColor)
 
-            if hasAgents {
+            if hasAgents && showAgentSelector {
                 agentSelector
                 Divider().background(AppColors.borderColor)
-            } else {
+            } else if !hasAgents {
                 agentNameInput
                 Divider().background(AppColors.borderColor)
             }
@@ -63,7 +81,10 @@ struct AgentChatView: View {
         }
         .cardStyle()
         .onAppear {
-            if agents.count == 1 {
+            if let initialAgentId,
+               let initialAgent = agents.first(where: { $0.id == initialAgentId }) {
+                selectAgent(initialAgent)
+            } else if agents.count == 1 {
                 selectAgent(agents[0])
             }
             Task { await messageClient.connect(deviceId: deviceId) }

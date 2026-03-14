@@ -68,6 +68,22 @@ extension OpenClawInfo {
             diagnosis: nil
         )
     }
+
+    static func parseAgentsResult(_ text: String) -> [OpenClawAgent] {
+        guard let data = text.data(using: .utf8) else { return [] }
+        if let decoded = try? JSONDecoder().decode([OpenClawAgent].self, from: data) {
+            return decoded
+        }
+        if let raw = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+            return raw.enumerated().compactMap { idx, item in
+                let id = (item["id"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                guard !id.isEmpty else { return nil }
+                let name = (item["name"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+                return OpenClawAgent(id: id, name: (name?.isEmpty == false ? name! : id))
+            }
+        }
+        return []
+    }
 }
 
 struct OpenClawOverview: Codable {

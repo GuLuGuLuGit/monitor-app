@@ -31,15 +31,7 @@ struct DeviceDetailView: View {
                         systemInfoCard
                         metricsChartCard
 
-                        if let info = viewModel.openClawInfo,
-                           (info.agents ?? []).isEmpty == false || info.overview?.agentsSummary != nil {
-                            AgentChatView(
-                                agents: info.agents ?? [],
-                                agentsSummary: info.overview?.agentsSummary,
-                                deviceId: currentDevice.deviceId,
-                                deviceInternalId: currentDevice.id
-                            )
-                        }
+                        agentMessageSection
 
                         skillsSection
                         openClawSection
@@ -48,6 +40,7 @@ struct DeviceDetailView: View {
                 }
                 .refreshable {
                     await viewModel.load()
+                    await viewModel.ensureAgentsLoaded(force: true)
                     await viewModel.loadMetrics()
                     await viewModel.loadSkills()
                 }
@@ -270,6 +263,63 @@ struct DeviceDetailView: View {
     // MARK: - Skills Section
 
     @ViewBuilder
+    private var agentMessageSection: some View {
+        if let info = viewModel.openClawInfo,
+           (info.agents ?? []).isEmpty == false || info.overview?.agentsSummary != nil || viewModel.isLoadingAgents {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: "message.fill")
+                        .foregroundStyle(AppColors.primary)
+                    Text("Agent 消息")
+                        .font(.headline)
+                        .foregroundStyle(AppColors.textTitle)
+                    Spacer()
+                    if viewModel.isLoadingAgents {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                            .tint(AppColors.primary)
+                    } else if let agents = info.agents, !agents.isEmpty {
+                        Text("\(agents.count)")
+                            .font(.caption)
+                            .foregroundStyle(AppColors.textSecondary)
+                    } else if let summary = info.overview?.agentsSummary {
+                        Text(summary)
+                            .font(.system(size: 10))
+                            .foregroundStyle(AppColors.textSecondary)
+                            .lineLimit(1)
+                    }
+                }
+
+                if let agents = info.agents, !agents.isEmpty {
+                    ForEach(agents) { agent in
+                        NavigationLink {
+                            AgentChatView(
+                                agents: agents,
+                                agentsSummary: info.overview?.agentsSummary,
+                                deviceId: currentDevice.deviceId,
+                                deviceInternalId: currentDevice.id,
+                                initialAgentId: agent.id,
+                                showAgentSelector: false
+                            )
+                            .navigationTitle(agent.name)
+                            .navigationBarTitleDisplayMode(.inline)
+                        } label: {
+                            agentRow(agent)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } else {
+                    Text(viewModel.isLoadingAgents ? "正在获取当前设备的 Agent 列表" : "暂未获取到 Agent 列表")
+                        .font(.caption)
+                        .foregroundStyle(AppColors.textSecondary)
+                }
+            }
+            .padding()
+            .cardStyle()
+        }
+    }
+
+    @ViewBuilder
     private var skillsSection: some View {
         if !viewModel.skills.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
@@ -346,10 +396,6 @@ struct DeviceDetailView: View {
                     overviewCard(overview)
                 }
 
-                if let agents = info.agents, !agents.isEmpty {
-                    agentsCard(agents)
-                }
-
                 if let channels = info.channels, !channels.isEmpty {
                     channelsCard(channels)
                 }
@@ -390,33 +436,61 @@ struct DeviceDetailView: View {
         }
     }
 
-    private func agentsCard(_ agents: [OpenClawAgent]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Agents (\(agents.count))")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(AppColors.textTitle)
+    private func agentRow(_ agent: OpenClawAgent) -> some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(isAgentOnline(agent) ? AppColors.success : AppColors.disabled)
+                .frame(width: 8, height: 8)
 
-            ForEach(agents) { agent in
-                HStack {
-                    Circle()
-                        .fill(agent.active == "true" ? AppColors.success : AppColors.textSecondary)
-                        .frame(width: 6, height: 6)
-                        .shadow(color: agent.active == "true" ? AppColors.success.opacity(0.4) : .clear, radius: 3)
-                    Text(agent.name)
-                        .font(.caption)
-                        .foregroundStyle(AppColors.textPrimary)
-                    Spacer()
-                    if let sessions = agent.sessions {
-                        Text("\(sessions) sessions")
-                            .font(.caption2)
-                            .foregroundStyle(AppColors.textSecondary)
-                    }
-                }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(agent.name)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(AppColors.textPrimary)
+                Text(agent.id)
+                    .font(.caption2)
+                    .foregroundStyle(AppColors.textSecondary)
             }
+
+            Spacer()
+
+            if let sessions = agent.sessions {
+                Text("\(sessions) sessions")
+                    .font(.caption2)
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+
+            Image(systemName: "chevron.right")
+                .font(.caption2)
+                .foregroundStyle(AppColors.textSecondary)
         }
-        .padding()
-        .cardStyle()
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+    }
+
+    private func isAgentOnline(_ agent: OpenClawAgent) -> Bool {
+        guard let active = agent.active?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !active.isEmpty else { return false }
+        let lower = active.lowercased()
+        if ["true", "yes", "online", "active", "now"].contains(lower) {
+            return true
+        }
+        guard let token = lower.split(separator: " ").first,
+              let unit = token.last,
+              let num = Double(token.dropLast()) else {
+            return false
+        }
+
+        let age: Double
+        switch unit {
+        case "s": age = num
+        case "m": age = num * 60
+        case "h": age = num * 3600
+        case "d": age = num * 86400
+        case "w": age = num * 604800
+        default: return false
+        }
+        return age <= 3600
     }
 
     private func channelsCard(_ channels: [OpenClawChannel]) -> some View {
