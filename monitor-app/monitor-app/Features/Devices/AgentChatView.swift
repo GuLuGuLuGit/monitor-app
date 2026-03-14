@@ -623,6 +623,10 @@ struct AgentChatView: View {
                     }
                 }
 
+                Task {
+                    await syncCommandResult(commandId: cmd.id)
+                }
+
                 if !messageClient.isConnected {
                     try? await Task.sleep(for: .seconds(2))
                     await loadHistory(agentId: agent.id)
@@ -638,6 +642,37 @@ struct AgentChatView: View {
         let response: PublicKeyResponse = try await APIClient.shared.request(.devicePublicKey(id: deviceInternalId))
         publicKeyCache = response.publicKey
         return response.publicKey
+    }
+
+    private func syncCommandResult(commandId: Int64) async {
+        for _ in 0..<12 {
+            do {
+                let cmd: AgentCommand = try await APIClient.shared.request(.command(id: commandId))
+                if cmd.status == AgentCommand.Status.pending.rawValue || cmd.status == AgentCommand.Status.running.rawValue {
+                    try? await Task.sleep(for: .seconds(1))
+                    continue
+                }
+
+                let finalStatus: Int8 = cmd.result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? cmd.status : 2
+                await MainActor.run {
+                    updateUserStatus(commandId: commandId, status: finalStatus)
+                    let replyText = cmd.result.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !replyText.isEmpty {
+                        appendOrReplace(ChatMessage(
+                            id: "reply-\(commandId)",
+                            role: .assistant,
+                            content: replyText,
+                            time: cmd.executedAt ?? cmd.updatedAt,
+                            status: 2,
+                            inputType: .text
+                        ))
+                    }
+                }
+                return
+            } catch {
+                return
+            }
+        }
     }
 
     // MARK: - Speech
