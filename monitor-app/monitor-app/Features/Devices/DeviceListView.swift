@@ -488,32 +488,7 @@ struct DeviceListView: View {
     }
 
     private func isAgentOnline(_ agent: OpenClawAgent) -> Bool {
-        guard let active = agent.active?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !active.isEmpty else { return false }
-        let lower = active.lowercased()
-        if ["true", "yes", "online", "active", "now"].contains(lower) {
-            return true
-        }
-        guard let age = parseActiveAge(lower) else { return false }
-        return age <= 3600
-    }
-
-    private func parseActiveAge(_ value: String) -> TimeInterval? {
-        let parts = value.split(separator: " ")
-        guard let token = parts.first else { return nil }
-        let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let unit = trimmed.last else { return nil }
-        let numberStr = trimmed.dropLast()
-        guard let num = Double(numberStr) else { return nil }
-
-        switch unit {
-        case "s": return num
-        case "m": return num * 60
-        case "h": return num * 3600
-        case "d": return num * 86400
-        case "w": return num * 604800
-        default: return nil
-        }
+        agent.isLikelyOnline()
     }
 }
 

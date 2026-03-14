@@ -11,6 +11,7 @@ final class DeviceDetailViewModel {
     private(set) var openClawInfo: OpenClawInfo?
     private(set) var skills: [SkillItem] = []
     private(set) var skillTotal: Int = 0
+    private(set) var recentAgentActivity: [String: Date] = [:]
     private(set) var isLoading = false
     private(set) var errorMessage: String?
 
@@ -95,6 +96,38 @@ final class DeviceDetailViewModel {
         }
     }
 
+    func loadRecentAgentActivity() async {
+        guard let deviceId = device?.deviceId, !deviceId.isEmpty else { return }
+
+        do {
+            let result: CommandListResponse = try await APIClient.shared.request(
+                .commands,
+                queryItems: [
+                    URLQueryItem(name: "device_id", value: deviceId),
+                    URLQueryItem(name: "command_type", value: "openclaw_message"),
+                    URLQueryItem(name: "page", value: "1"),
+                    URLQueryItem(name: "page_size", value: "50"),
+                ]
+            )
+
+            var latestByAgent: [String: Date] = [:]
+            for cmd in result.commands {
+                guard let agentId = cmd.commandParams?["agent_id"]?.value as? String,
+                      !agentId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    continue
+                }
+                let activityAt = cmd.executedAt ?? cmd.updatedAt
+                if let existing = latestByAgent[agentId], existing >= activityAt {
+                    continue
+                }
+                latestByAgent[agentId] = activityAt
+            }
+            recentAgentActivity = latestByAgent
+        } catch {
+            // Non-critical
+        }
+    }
+
     func startAutoRefresh() {
         stopAutoRefresh()
         refreshTimer = Timer.scheduledTimer(withTimeInterval: AppConfig.detailRefreshInterval, repeats: true) { [weak self] _ in
@@ -103,6 +136,7 @@ final class DeviceDetailViewModel {
                 await self.load()
                 await self.loadMetrics()
                 await self.loadSkills()
+                await self.loadRecentAgentActivity()
             }
         }
     }

@@ -37,7 +37,8 @@ extension OpenClawInfo {
                 else if let s = a["sessions"] as? String, let n = Int(s) { sessions = n }
                 let active = a["active"] as? String
                 let bootstrap = a["bootstrap"] as? String
-                agents.append(OpenClawAgent(id: id, name: name, sessions: sessions, active: active, bootstrap: bootstrap))
+                let agentOnline = a["agent_online"] as? Bool
+                agents.append(OpenClawAgent(id: id, name: name, sessions: sessions, active: active, bootstrap: bootstrap, agentOnline: agentOnline))
             }
         }
 
@@ -140,12 +141,14 @@ extension OpenClawInfo {
             else if let s = item["sessions"] as? String, let n = Int(s) { sessions = n }
             let active = item["active"] as? String
             let bootstrap = item["bootstrap"] as? String
+            let agentOnline = item["agent_online"] as? Bool
             return OpenClawAgent(
                 id: id,
                 name: (name?.isEmpty == false ? name! : "agent-\(idx)"),
                 sessions: sessions,
                 active: active,
-                bootstrap: bootstrap
+                bootstrap: bootstrap,
+                agentOnline: agentOnline
             )
         }
     }
@@ -181,13 +184,15 @@ struct OpenClawAgent: Codable, Identifiable {
     let sessions: Int?
     let active: String?
     let bootstrap: String?
+    let agentOnline: Bool?
 
-    init(id: String, name: String, sessions: Int? = nil, active: String? = nil, bootstrap: String? = nil) {
+    init(id: String, name: String, sessions: Int? = nil, active: String? = nil, bootstrap: String? = nil, agentOnline: Bool? = nil) {
         self.id = id
         self.name = name
         self.sessions = sessions
         self.active = active
         self.bootstrap = bootstrap
+        self.agentOnline = agentOnline
     }
 
     init(from decoder: Decoder) throws {
@@ -204,10 +209,58 @@ struct OpenClawAgent: Codable, Identifiable {
         }
         active = try? container.decode(String.self, forKey: .active)
         bootstrap = try? container.decode(String.self, forKey: .bootstrap)
+        agentOnline = try? container.decode(Bool.self, forKey: .agentOnline)
     }
 
     enum CodingKeys: String, CodingKey {
         case id, name, sessions, active, bootstrap
+        case agentOnline = "agent_online"
+    }
+}
+
+extension OpenClawAgent {
+    func isLikelyOnline(recentActivityAt: Date? = nil, optimistic: Bool = false, now: Date = Date()) -> Bool {
+        if optimistic {
+            return true
+        }
+        if let agentOnline {
+            return agentOnline
+        }
+
+        if let active = active?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !active.isEmpty {
+            let lower = active.lowercased()
+            if ["true", "yes", "online", "active", "now"].contains(lower) {
+                return true
+            }
+            if let age = Self.parseActiveAge(lower), age == 0 {
+                return true
+            }
+        }
+
+        if let recentActivityAt, now.timeIntervalSince(recentActivityAt) <= 900 {
+            return true
+        }
+
+        return false
+    }
+
+    private static func parseActiveAge(_ value: String) -> TimeInterval? {
+        let parts = value.split(separator: " ")
+        guard let token = parts.first else { return nil }
+        let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let unit = trimmed.last else { return nil }
+        let numberStr = trimmed.dropLast()
+        guard let num = Double(numberStr) else { return nil }
+
+        switch unit {
+        case "s": return num
+        case "m": return num * 60
+        case "h": return num * 3600
+        case "d": return num * 86400
+        case "w": return num * 604800
+        default: return nil
+        }
     }
 }
 
