@@ -15,6 +15,7 @@ struct AgentChatView: View {
     @State private var inputText = ""
     @State private var isSending = false
     @State private var isLoadingHistory = false
+    @State private var didInitialize = false
     @State private var isRecording = false
     @State private var unreadAgentIds: Set<String> = []
     @State private var messageClient = AgentMessageClient()
@@ -45,6 +46,14 @@ struct AgentChatView: View {
         self.deviceInternalId = deviceInternalId
         self.initialAgentId = initialAgentId
         self.showAgentSelector = showAgentSelector
+        if let initialAgentId,
+           let initialAgent = agents.first(where: { $0.id == initialAgentId }) {
+            self._selectedAgent = State(initialValue: initialAgent)
+        } else if agents.count == 1 {
+            self._selectedAgent = State(initialValue: agents[0])
+        } else {
+            self._selectedAgent = State(initialValue: nil)
+        }
     }
 
     private var hasAgents: Bool { !agents.isEmpty }
@@ -81,11 +90,11 @@ struct AgentChatView: View {
         }
         .cardStyle()
         .onAppear {
-            if let initialAgentId,
-               let initialAgent = agents.first(where: { $0.id == initialAgentId }) {
-                selectAgent(initialAgent)
-            } else if agents.count == 1 {
-                selectAgent(agents[0])
+            if !didInitialize {
+                didInitialize = true
+                if let selectedAgent {
+                    selectAgent(selectedAgent)
+                }
             }
             Task { await messageClient.connect(deviceId: deviceId) }
         }
