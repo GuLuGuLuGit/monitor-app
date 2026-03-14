@@ -410,12 +410,14 @@ struct AgentChatView: View {
     // MARK: - Actions
 
     private func selectAgent(_ agent: OpenClawAgent) {
+        let isSameAgent = selectedAgent?.id == agent.id
         selectedAgent = agent
         customAgentName = ""
-        messages = []
         inputText = ""
         unreadAgentIds.remove(agent.id)
-        Task { await loadHistory(agentId: agent.id) }
+        if !isSameAgent || messages.isEmpty {
+            Task { await loadHistory(agentId: agent.id) }
+        }
     }
 
     private func loadHistory(agentId: String) async {
