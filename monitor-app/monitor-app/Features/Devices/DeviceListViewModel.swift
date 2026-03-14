@@ -7,11 +7,13 @@ final class DeviceListViewModel {
     private(set) var devices: [Device] = []
     private(set) var isLoading = false
     private(set) var errorMessage: String?
+    private(set) var unreadMessageCounts: [String: Int] = [:]
 
     var searchText = ""
     var statusFilter: Int8? = nil
 
     private var refreshTimer: Timer?
+    private let unreadSeenKey = "device_agent_unread_seen_at"
 
     var filteredDevices: [Device] {
         var result = devices
@@ -50,6 +52,7 @@ final class DeviceListViewModel {
                 ]
             )
             devices = result.items
+            await loadUnreadMessageCounts()
         } catch let error as APIError {
             errorMessage = error.errorDescription
         } catch {
@@ -93,5 +96,55 @@ final class DeviceListViewModel {
     func stopAutoRefresh() {
         refreshTimer?.invalidate()
         refreshTimer = nil
+    }
+
+    func unreadCount(for deviceId: String) -> Int {
+        unreadMessageCounts[deviceId] ?? 0
+    }
+
+    func markMessagesRead(for deviceId: String) {
+        var seenMap = unreadSeenMap()
+        seenMap[deviceId] = ISO8601DateFormatter().string(from: Date())
+        UserDefaults.standard.set(seenMap, forKey: unreadSeenKey)
+        unreadMessageCounts[deviceId] = 0
+    }
+
+    private func loadUnreadMessageCounts() async {
+        do {
+            let response: CommandListResponse = try await APIClient.shared.request(
+                .commands,
+                queryItems: [
+                    URLQueryItem(name: "command_type", value: "openclaw_message"),
+                    URLQueryItem(name: "page", value: "1"),
+                    URLQueryItem(name: "page_size", value: "100"),
+                ]
+            )
+
+            let seenMap = unreadSeenDates()
+            var counts: [String: Int] = [:]
+
+            for command in response.commands {
+                let replyText = command.result.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !replyText.isEmpty else { continue }
+
+                let eventTime = command.executedAt ?? command.updatedAt
+                let seenAt = seenMap[command.deviceId] ?? .distantPast
+                guard eventTime > seenAt else { continue }
+                counts[command.deviceId, default: 0] += 1
+            }
+
+            unreadMessageCounts = counts
+        } catch {
+            unreadMessageCounts = [:]
+        }
+    }
+
+    private func unreadSeenMap() -> [String: String] {
+        UserDefaults.standard.dictionary(forKey: unreadSeenKey) as? [String: String] ?? [:]
+    }
+
+    private func unreadSeenDates() -> [String: Date] {
+        let formatter = ISO8601DateFormatter()
+        return unreadSeenMap().compactMapValues { formatter.date(from: $0) }
     }
 }

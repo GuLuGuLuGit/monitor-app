@@ -70,25 +70,26 @@ struct AgentChatView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            Divider().background(AppColors.borderColor)
+        ZStack {
+            AppColors.gradientBg.ignoresSafeArea()
 
-            if hasAgents && showAgentSelector {
-                agentSelector
-                Divider().background(AppColors.borderColor)
-            } else if !hasAgents {
-                agentNameInput
-                Divider().background(AppColors.borderColor)
-            }
+            VStack(spacing: 16) {
+                conversationHero
 
-            if activeAgent != nil {
-                chatContent
-            } else {
-                placeholder
+                if hasAgents && showAgentSelector {
+                    agentRoster
+                } else if !hasAgents {
+                    manualAgentCard
+                }
+
+                if activeAgent != nil {
+                    chatWorkspace
+                } else {
+                    placeholderCard
+                }
             }
+            .padding()
         }
-        .cardStyle()
         .onAppear {
             if !didInitialize {
                 didInitialize = true
@@ -107,186 +108,290 @@ struct AgentChatView: View {
         }
     }
 
-    // MARK: - Header
+    private var conversationHero: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(AppColors.primary.opacity(0.12))
+                        .frame(width: 52, height: 52)
+                    Image(systemName: "bubble.left.and.bubble.right.fill")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(AppColors.primary)
+                }
 
-    private var header: some View {
-        HStack {
-            Image(systemName: "message.fill")
-                .foregroundStyle(AppColors.primary)
-            Text("Agent 消息")
-                .font(.headline)
-                .foregroundStyle(AppColors.textTitle)
-            Spacer()
-            if hasAgents {
-                Text("\(agents.count)")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(AppColors.primary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(AppColors.primary.opacity(0.1))
-                    .clipShape(Capsule())
-            } else if let summary = agentsSummary {
-                Text(summary)
-                    .font(.system(size: 10))
-                    .foregroundStyle(AppColors.textSecondary)
-                    .lineLimit(1)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Agent 对话")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(AppColors.textSecondary)
+                    Text(activeAgent?.name ?? "选择 Agent 开始会话")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundStyle(AppColors.textTitle)
+                    Text("设备 ID: \(deviceId)")
+                        .font(.caption)
+                        .foregroundStyle(AppColors.textSecondary)
+                }
+                Spacer()
+            }
+
+            HStack(spacing: 8) {
+                if let activeAgent,
+                   let current = agents.first(where: { $0.id == activeAgent.id }) {
+                    statePill(text: isAgentOnline(current) ? "在线" : "离线", color: isAgentOnline(current) ? AppColors.success : AppColors.disabled)
+                    if let sessions = current.sessions {
+                        statePill(text: "\(sessions) 会话", color: AppColors.primary)
+                    }
+                    if let active = current.active, !active.isEmpty {
+                        statePill(text: "最近活跃 \(active)", color: AppColors.cyan)
+                    }
+                } else if let summary = agentsSummary, !summary.isEmpty {
+                    statePill(text: summary, color: AppColors.primary)
+                } else if hasAgents {
+                    statePill(text: "\(agents.count) Agents", color: AppColors.primary)
+                }
+            }
+
+            HStack(spacing: 12) {
+                chatStatCard(title: "消息", value: "\(messages.count)", tint: AppColors.primary)
+                chatStatCard(title: "未读", value: "\(unreadAgentIds.count)", tint: unreadAgentIds.isEmpty ? AppColors.disabled : AppColors.error)
+                chatStatCard(title: "模式", value: isRecording ? "语音中" : "文本", tint: isRecording ? AppColors.warning : AppColors.cyan)
             }
         }
-        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .cardStyle()
     }
 
-    // MARK: - Agent Selector (when agents list available)
+    private var agentRoster: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Agent 名录")
+                    .font(.headline)
+                    .foregroundStyle(AppColors.textTitle)
+                Spacer()
+                Text("\(agents.filter(isAgentOnline).count) 在线 / \(agents.count) 总数")
+                    .font(.caption)
+                    .foregroundStyle(AppColors.textSecondary)
+            }
 
-    private var agentSelector: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                 ForEach(agents) { agent in
                     let online = isAgentOnline(agent)
                     Button { selectAgent(agent) } label: {
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(online ? AppColors.success : AppColors.disabled)
-                                .frame(width: 6, height: 6)
-                            Text(agent.name)
-                                .font(.caption)
-                                .fontWeight(.medium)
-                            Text(online ? "在线" : "离线")
-                                .font(.caption2)
-                                .foregroundStyle(online ? AppColors.success : AppColors.textSecondary)
-                            if unreadAgentIds.contains(agent.id) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
                                 Circle()
-                                    .fill(AppColors.error)
-                                    .frame(width: 6, height: 6)
+                                    .fill(online ? AppColors.success : AppColors.disabled)
+                                    .frame(width: 8, height: 8)
+                                Spacer()
+                                if unreadAgentIds.contains(agent.id) {
+                                    Circle()
+                                        .fill(AppColors.error)
+                                        .frame(width: 8, height: 8)
+                                }
+                            }
+
+                            Text(agent.name)
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(selectedAgent?.id == agent.id ? AppColors.primary : AppColors.textPrimary)
+                                .lineLimit(1)
+                            Text(agent.id)
+                                .font(.caption2)
+                                .foregroundStyle(AppColors.textSecondary)
+                                .lineLimit(1)
+                            HStack(spacing: 6) {
+                                statusCapsule(text: online ? "在线" : "离线", color: online ? AppColors.success : AppColors.disabled)
+                                if let sessions = agent.sessions {
+                                    statusCapsule(text: "\(sessions) 会话", color: AppColors.primary)
+                                }
+                                if unreadAgentIds.contains(agent.id) {
+                                    statusCapsule(text: "新消息", color: AppColors.error)
+                                }
                             }
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(
-                            selectedAgent?.id == agent.id
-                                ? AppColors.primary.opacity(0.15)
-                                : Color.clear
-                        )
-                        .foregroundStyle(
-                            selectedAgent?.id == agent.id
-                                ? AppColors.primary
-                                : AppColors.textSecondary
-                        )
-                        .clipShape(Capsule())
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(14)
+                        .background(selectedAgent?.id == agent.id ? AppColors.primary.opacity(0.12) : Color.white.opacity(0.28))
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
                         .overlay(
-                            Capsule().stroke(
-                                selectedAgent?.id == agent.id
-                                    ? AppColors.primary.opacity(0.3)
-                                    : AppColors.borderColor,
-                                lineWidth: 1
-                            )
+                            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
+                                .stroke(selectedAgent?.id == agent.id ? AppColors.primary.opacity(0.3) : AppColors.borderColor, lineWidth: 1)
                         )
                     }
+                    .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
         }
+        .padding(20)
+        .cardStyle()
     }
 
-    // MARK: - Agent Name Input (when agents list unavailable)
+    private var manualAgentCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("手动连接 Agent")
+                .font(.headline)
+                .foregroundStyle(AppColors.textTitle)
 
-    private var agentNameInput: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "person.fill.questionmark")
-                .font(.caption)
-                .foregroundStyle(AppColors.textSecondary)
-
-            TextField("输入 Agent 名称 (如 default)", text: $customAgentName)
+            Text("设备暂未上报 Agent 列表时，可先输入 agent 名称直接恢复聊天历史并继续对话。")
                 .font(.subheadline)
-                .foregroundStyle(AppColors.textPrimary)
-                .focused($isAgentNameFocused)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .submitLabel(.done)
-                .onSubmit {
-                    if !customAgentName.trimmingCharacters(in: .whitespaces).isEmpty {
-                        let name = customAgentName.trimmingCharacters(in: .whitespaces)
-                        unreadAgentIds.remove(name)
-                        Task { await loadHistory(agentId: name) }
-                    }
-                }
+                .foregroundStyle(AppColors.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
 
-            if !customAgentName.isEmpty {
-                Button {
-                    let name = customAgentName.trimmingCharacters(in: .whitespaces)
-                    if !name.isEmpty {
-                        messages = []
-                        unreadAgentIds.remove(name)
-                        Task { await loadHistory(agentId: name) }
+            HStack(spacing: 10) {
+                TextField("输入 Agent 名称，例如 default", text: $customAgentName)
+                    .font(.subheadline)
+                    .foregroundStyle(AppColors.textPrimary)
+                    .focused($isAgentNameFocused)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(Color.white.opacity(0.4))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(AppColors.borderColor, lineWidth: 1)
+                    )
+                    .submitLabel(.done)
+                    .onSubmit {
+                        handleConnectCustomAgent()
                     }
-                } label: {
-                    Text("连接")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 5)
-                        .background(AppColors.gradientPrimary)
-                        .clipShape(Capsule())
+
+                Button("连接") {
+                    handleConnectCustomAgent()
                 }
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(AppColors.gradientPrimary)
+                .clipShape(Capsule())
+                .disabled(customAgentName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
+        .padding(20)
+        .cardStyle()
     }
 
-    // MARK: - Chat Content
-
-    private var chatContent: some View {
+    private var chatWorkspace: some View {
         VStack(spacing: 0) {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 8) {
-                        if isLoadingHistory {
-                            ProgressView()
-                                .tint(AppColors.primary)
-                                .padding()
-                        } else if messages.isEmpty {
-                            VStack(spacing: 8) {
-                                Image(systemName: "bubble.left.and.bubble.right")
-                                    .font(.system(size: 32))
-                                    .foregroundStyle(AppColors.textSecondary.opacity(0.4))
-                                Text("开始与 \(activeAgent?.name ?? "Agent") 对话")
-                                    .font(.caption)
-                                    .foregroundStyle(AppColors.textSecondary)
-                            }
-                            .padding(.vertical, 32)
-                        } else {
-                            ForEach(messages) { msg in
-                                messageBubble(msg)
-                                    .id(msg.id)
-                            }
-                        }
-
-                        Color.clear.frame(height: 1).id("bottom")
-                    }
-                    .padding()
-                }
-                .onChange(of: messages.count) { _, _ in
-                    withAnimation {
-                        proxy.scrollTo("bottom", anchor: .bottom)
-                    }
-                }
-            }
-
+            chatHeader
+            Divider().background(AppColors.borderColor)
+            chatScrollArea
             Divider().background(AppColors.borderColor)
             inputBar
         }
+        .frame(maxWidth: .infinity, minHeight: 420, alignment: .top)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusLarge))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusLarge)
+                .stroke(AppColors.borderColor, lineWidth: 1)
+        )
+        .shadow(color: AppTheme.neumorphicShadow, radius: AppTheme.cardShadowRadius, x: 3, y: 3)
+        .shadow(color: AppTheme.neumorphicLight, radius: AppTheme.cardShadowRadius, x: -3, y: -3)
     }
 
-    // MARK: - Message Bubble
+    private var chatHeader: some View {
+        HStack(spacing: 12) {
+            if let activeAgent,
+               let current = agents.first(where: { $0.id == activeAgent.id }) {
+                Circle()
+                    .fill(isAgentOnline(current) ? AppColors.success : AppColors.disabled)
+                    .frame(width: 10, height: 10)
+            } else {
+                Circle()
+                    .fill(AppColors.primary)
+                    .frame(width: 10, height: 10)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(activeAgent?.name ?? "Agent")
+                    .font(.headline)
+                    .foregroundStyle(AppColors.textTitle)
+                Text(activeAgent?.id ?? "")
+                    .font(.caption)
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+            Spacer()
+            if let selectedAgent {
+                HStack(spacing: 6) {
+                    statusCapsule(text: isAgentOnline(selectedAgent) ? "在线" : "离线", color: isAgentOnline(selectedAgent) ? AppColors.success : AppColors.disabled)
+                    if let sessions = selectedAgent.sessions {
+                        statusCapsule(text: "\(sessions) 会话", color: AppColors.primary)
+                    }
+                }
+            }
+            if isLoadingHistory {
+                ProgressView()
+                    .tint(AppColors.primary)
+                    .scaleEffect(0.8)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+    }
+
+    private var chatScrollArea: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 10) {
+                    if isLoadingHistory {
+                        ProgressView()
+                            .tint(AppColors.primary)
+                            .padding()
+                    } else if messages.isEmpty {
+                        VStack(spacing: 10) {
+                            Image(systemName: "bubble.left.and.bubble.right")
+                                .font(.system(size: 30))
+                                .foregroundStyle(AppColors.textSecondary.opacity(0.45))
+                            Text("开始与 \(activeAgent?.name ?? "Agent") 对话")
+                                .font(.caption)
+                                .foregroundStyle(AppColors.textSecondary)
+                        }
+                        .padding(.vertical, 40)
+                    } else {
+                        ForEach(messages) { msg in
+                            messageBubble(msg)
+                                .id(msg.id)
+                        }
+                    }
+
+                    Color.clear.frame(height: 1).id("bottom")
+                }
+                .padding(16)
+            }
+            .background(Color.white.opacity(0.18))
+            .onChange(of: messages.count) { _, _ in
+                withAnimation {
+                    proxy.scrollTo("bottom", anchor: .bottom)
+                }
+            }
+        }
+    }
 
     private func messageBubble(_ msg: ChatMessage) -> some View {
         HStack {
-            if msg.role == .user { Spacer(minLength: 48) }
+            if msg.role == .user { Spacer(minLength: 56) }
 
-            VStack(alignment: msg.role == .user ? .trailing : .leading, spacing: 4) {
+            VStack(alignment: msg.role == .user ? .trailing : .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Text(msg.role == .user ? "我" : (activeAgent?.name ?? "Agent"))
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(AppColors.textSecondary)
+                    if msg.role == .user, !msg.statusLabel.isEmpty {
+                        statusCapsule(
+                            text: msg.statusLabel,
+                            color: msg.status == 3 ? AppColors.error : AppColors.warning
+                        )
+                    }
+                }
+
                 if msg.inputType == .voice && msg.role == .user {
                     HStack(spacing: 4) {
                         Image(systemName: "mic.fill")
@@ -294,41 +399,38 @@ struct AgentChatView: View {
                         Text("语音")
                             .font(.system(size: 10))
                     }
-                    .foregroundStyle(AppColors.primary.opacity(0.7))
+                    .foregroundStyle(AppColors.primary.opacity(0.8))
                 }
 
                 Text(msg.content)
                     .font(.subheadline)
                     .foregroundStyle(msg.role == .user ? .white : AppColors.textPrimary)
                     .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 11)
                     .background(
                         msg.role == .user
                             ? AnyShapeStyle(AppColors.gradientPrimary)
-                            : AnyShapeStyle(Color.white.opacity(0.5))
+                            : AnyShapeStyle(Color.white.opacity(0.72))
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .shadow(color: AppTheme.neumorphicShadow.opacity(0.2), radius: 3, x: 1, y: 1)
+                    .clipShape(RoundedRectangle(cornerRadius: 18))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18)
+                            .stroke(msg.role == .user ? Color.clear : AppColors.borderColor, lineWidth: 1)
+                    )
 
                 HStack(spacing: 4) {
                     Text(msg.timeString)
-                        .font(.system(size: 9))
-                    if msg.role == .user {
-                        Text(msg.statusLabel)
-                            .font(.system(size: 9))
-                    }
+                        .font(.system(size: 10))
                 }
-                .foregroundStyle(AppColors.textSecondary.opacity(0.7))
+                .foregroundStyle(AppColors.textSecondary.opacity(0.8))
             }
 
-            if msg.role == .assistant { Spacer(minLength: 48) }
+            if msg.role == .assistant { Spacer(minLength: 56) }
         }
     }
 
-    // MARK: - Input Bar
-
     private var inputBar: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Button {
                 if !speechChecked {
                     checkSpeechAvailability()
@@ -339,12 +441,8 @@ struct AgentChatView: View {
                 Image(systemName: isRecording ? "stop.circle.fill" : "mic.fill")
                     .font(.system(size: 20))
                     .foregroundStyle(isRecording ? AppColors.error : (speechAvailable ? AppColors.primary : AppColors.disabled))
-                    .frame(width: 36, height: 36)
-                    .background(
-                        isRecording
-                            ? AppColors.error.opacity(0.12)
-                            : AppColors.primary.opacity(0.1)
-                    )
+                    .frame(width: 40, height: 40)
+                    .background(isRecording ? AppColors.error.opacity(0.12) : AppColors.primary.opacity(0.1))
                     .clipShape(Circle())
             }
             .disabled(isSending)
@@ -354,8 +452,8 @@ struct AgentChatView: View {
                 .foregroundStyle(AppColors.textPrimary)
                 .focused($isInputFocused)
                 .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(.ultraThinMaterial)
+                .padding(.vertical, 10)
+                .background(Color.white.opacity(0.4))
                 .clipShape(RoundedRectangle(cornerRadius: 18))
                 .overlay(
                     RoundedRectangle(cornerRadius: 18)
@@ -376,38 +474,90 @@ struct AgentChatView: View {
                     if isSending {
                         ProgressView().tint(.white).scaleEffect(0.7)
                     } else {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.system(size: 28))
+                        Label("发送", systemImage: "arrow.up")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
                     }
                 }
-                .foregroundStyle(
+                .foregroundStyle(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(
                     inputText.trimmingCharacters(in: .whitespaces).isEmpty && !isSending
-                        ? AppColors.disabled
-                        : AppColors.primary
+                        ? AnyShapeStyle(AppColors.disabled.opacity(0.7))
+                        : AnyShapeStyle(AppColors.gradientPrimary)
                 )
+                .clipShape(Capsule())
             }
             .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty || isSending)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
     }
 
-    // MARK: - Placeholder
-
-    private var placeholder: some View {
+    private var placeholderCard: some View {
         VStack(spacing: 12) {
             Image(systemName: hasAgents ? "hand.point.up.left.fill" : "person.fill.questionmark")
                 .font(.system(size: 32))
                 .foregroundStyle(AppColors.textSecondary.opacity(0.4))
-            Text(hasAgents ? "选择一个 Agent 开始对话" : "输入 Agent 名称开始对话")
-                .font(.caption)
+            Text(hasAgents ? "先从上方名录选择一个 Agent" : "输入 Agent 名称开始对话")
+                .font(.subheadline)
                 .foregroundStyle(AppColors.textSecondary)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.vertical, 40)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 54)
+        .cardStyle()
     }
 
-    // MARK: - Actions
+    private func handleConnectCustomAgent() {
+        let name = customAgentName.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty else { return }
+        messages = []
+        unreadAgentIds.remove(name)
+        Task { await loadHistory(agentId: name) }
+    }
+
+    private func statePill(text: String, color: Color) -> some View {
+        Text(text)
+            .font(.caption2)
+            .fontWeight(.semibold)
+            .foregroundStyle(color)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(color.opacity(0.12))
+            .clipShape(Capsule())
+    }
+
+    private func statusCapsule(text: String, color: Color) -> some View {
+        Text(text)
+            .font(.caption2)
+            .fontWeight(.semibold)
+            .foregroundStyle(color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(color.opacity(0.12))
+            .clipShape(Capsule())
+    }
+
+    private func chatStatCard(title: String, value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(AppColors.textSecondary)
+            Text(value)
+                .font(.subheadline)
+                .fontWeight(.bold)
+                .foregroundStyle(tint)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.white.opacity(0.28))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(AppColors.borderColor, lineWidth: 1)
+        )
+    }
 
     private func selectAgent(_ agent: OpenClawAgent) {
         let isSameAgent = selectedAgent?.id == agent.id
@@ -547,7 +697,7 @@ struct AgentChatView: View {
             return true
         }
         if let age = parseActiveAge(lower) {
-            return age <= 3600 // 1 hour
+            return age <= 3600
         }
         return false
     }
@@ -675,8 +825,6 @@ struct AgentChatView: View {
         }
     }
 
-    // MARK: - Speech
-
     private func checkSpeechAvailability() {
         speechChecked = true
         SFSpeechRecognizer.requestAuthorization { status in
@@ -733,8 +881,6 @@ struct AgentChatView: View {
     }
 }
 
-// MARK: - ChatMessage Model
-
 struct ChatMessage: Identifiable {
     enum Role { case user, assistant }
     enum InputType { case text, voice }
@@ -754,11 +900,11 @@ struct ChatMessage: Identifiable {
 
     var statusLabel: String {
         switch status {
-        case 0: "· 发送中"
-        case 1: "· 处理中"
-        case 2: ""
-        case 3: "· 失败"
-        default: ""
+        case 0: return "发送中"
+        case 1: return "处理中"
+        case 2: return ""
+        case 3: return "失败"
+        default: return ""
         }
     }
 }

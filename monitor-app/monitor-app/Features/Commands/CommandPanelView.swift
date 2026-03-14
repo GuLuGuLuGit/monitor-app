@@ -11,34 +11,49 @@ struct CommandPanelView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            ForEach(AgentCommand.CommandGroup.allCases, id: \.rawValue) { group in
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(group.label)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(AppColors.textSecondary)
+            controlIntro
 
-                    LazyVGrid(columns: [
-                        GridItem(.flexible()),
-                        GridItem(.flexible()),
-                        GridItem(.flexible()),
-                        GridItem(.flexible()),
-                    ], spacing: 10) {
-                        ForEach(group.types, id: \.rawValue) { cmdType in
+            ForEach(AgentCommand.CommandGroup.allCases, id: \.rawValue) { group in
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(group.label)
+                                .font(.headline)
+                                .foregroundStyle(AppColors.textTitle)
+                            Text(groupDescription(group))
+                                .font(.caption)
+                                .foregroundStyle(AppColors.textSecondary)
+                        }
+                        Spacer()
+                        Text("\(group.types.count) 项")
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(AppColors.textSecondary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.white.opacity(0.28))
+                            .clipShape(Capsule())
+                    }
+
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                        ForEach(group.types.filter(\.isVisibleInCommandPanel), id: \.rawValue) { cmdType in
                             commandButton(cmdType)
                         }
                     }
                 }
+                .padding(18)
+                .cardStyle()
             }
 
             if let msg = viewModel.successMessage {
-                HStack {
+                HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(AppColors.success)
                     Text(msg)
                         .font(.caption)
                         .foregroundStyle(AppColors.success)
                 }
+                .padding(.horizontal, 4)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
@@ -87,6 +102,33 @@ struct CommandPanelView: View {
         }
     }
 
+    private var controlIntro: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("OpenClaw 控制台")
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundStyle(AppColors.textTitle)
+            Text("建议先执行状态查询、健康诊断和日志定位，再决定是否执行 restart、update、gateway 这类会影响运行面的操作。")
+                .font(.subheadline)
+                .foregroundStyle(AppColors.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .cardStyle()
+    }
+
+    private func groupDescription(_ group: AgentCommand.CommandGroup) -> String {
+        switch group {
+        case .control:
+            return "直接控制 OpenClaw 运行面。危险动作前建议先确认当前状态。"
+        case .diagnose:
+            return "优先使用查询类命令定位问题，再决定是否执行控制动作。"
+        case .manage:
+            return "涉及配置、更新、会话和安全，建议在低干扰时段执行。"
+        }
+    }
+
     private func commandButton(_ type: AgentCommand.CommandType) -> some View {
         Button {
             if type.needsParams {
@@ -98,22 +140,68 @@ struct CommandPanelView: View {
                 showConfirm = true
             }
         } label: {
-            VStack(spacing: 4) {
-                Image(systemName: type.icon)
-                    .font(.title3)
-                    .foregroundStyle(buttonColor(type))
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    ZStack {
+                        Circle()
+                            .fill(buttonColor(type).opacity(0.12))
+                            .frame(width: 34, height: 34)
+                        Image(systemName: type.icon)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(buttonColor(type))
+                    }
+                    Spacer()
+                    if type.needsParams {
+                        Text("参数")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(AppColors.textSecondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.white.opacity(0.25))
+                            .clipShape(Capsule())
+                    }
+                }
 
                 Text(type.label)
-                    .font(.caption2)
-                    .fontWeight(.medium)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
                     .foregroundStyle(AppColors.textPrimary)
-                    .lineLimit(1)
+
+                Text(commandHint(type))
+                    .font(.caption2)
+                    .foregroundStyle(AppColors.textSecondary)
+                    .lineLimit(2)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
-            .cardStyle()
+            .frame(maxWidth: .infinity, minHeight: 118, alignment: .topLeading)
+            .padding(14)
+            .background(Color.white.opacity(0.28))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
+                    .stroke(AppColors.borderColor, lineWidth: 1)
+            )
         }
+        .buttonStyle(.plain)
         .disabled(viewModel.isSending)
+    }
+
+    private func commandHint(_ type: AgentCommand.CommandType) -> String {
+        switch type {
+        case .start: return "启动 OpenClaw 服务"
+        case .stop: return "停止当前服务"
+        case .restart: return "重启服务和关键依赖"
+        case .gateway: return "查看或重启 Gateway"
+        case .status: return "读取当前运行状态"
+        case .doctor: return "执行健康诊断"
+        case .probe: return "检查连通性与探针"
+        case .logs: return "查看最近日志输出"
+        case .config: return "读取或验证配置"
+        case .update: return "检查并执行更新"
+        case .sessions: return "查看或清理会话"
+        case .security: return "执行安全审计"
+        case .agents: return "读取 agent 列表"
+        case .message: return "发送消息给 agent"
+        }
     }
 
     private func buttonColor(_ type: AgentCommand.CommandType) -> Color {

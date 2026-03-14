@@ -9,6 +9,21 @@ struct OpenClawInfo: Codable {
     let diagnosis: OpenClawDiagnosis?
 }
 
+
+extension OpenClawInfo {
+    static func parse(from raw: String?) -> OpenClawInfo? {
+        guard let raw, let data = raw.data(using: .utf8) else { return nil }
+        let decoder = JSONDecoder()
+        if let decoded = try? decoder.decode(OpenClawInfo.self, from: data) {
+            return decoded
+        }
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            return OpenClawInfo.fromRawJSON(json)
+        }
+        return nil
+    }
+}
+
 extension OpenClawInfo {
     /// Manual fallback parser for when Codable fails
     static func fromRawJSON(_ json: [String: Any]) -> OpenClawInfo? {

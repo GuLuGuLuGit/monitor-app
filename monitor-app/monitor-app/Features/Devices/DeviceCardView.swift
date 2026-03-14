@@ -3,64 +3,200 @@ import SwiftUI
 struct DeviceCardView: View {
     let device: Device
     var latestMetric: SystemMetric? = nil
+    var unreadCount: Int = 0
+
+    private var openClawInfo: OpenClawInfo? {
+        OpenClawInfo.parse(from: device.extraData)
+    }
+
+    private var agentCount: Int {
+        openClawInfo?.agents?.count ?? 0
+    }
+
+    private var onlineAgentCount: Int {
+        (openClawInfo?.agents ?? []).filter(isAgentOnline).count
+    }
+
+    private var gatewaySummary: String {
+        guard let raw = openClawInfo?.overview?.gateway, !raw.isEmpty else { return "等待网关状态" }
+        let short = raw.count > 12 ? "\(raw.prefix(12))..." : raw
+        return "Gateway \(short)"
+    }
+
+    private var priority: (label: String, color: Color) {
+        if device.status != 1 { return ("待处理", AppColors.error) }
+        if agentCount == 0 || onlineAgentCount == 0 { return ("需确认", AppColors.warning) }
+        return ("稳定", AppColors.success)
+    }
 
     var body: some View {
-        HStack(spacing: 14) {
-            ZStack(alignment: .bottomTrailing) {
-                Image(systemName: deviceIcon)
-                    .font(.system(size: 28))
-                    .foregroundStyle(AppColors.primary)
-                    .frame(width: 44, height: 44)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                ZStack(alignment: .bottomTrailing) {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(AppColors.primary.opacity(0.12))
+                        .frame(width: 48, height: 48)
 
-                Circle()
-                    .fill(Color.deviceStatusColor(device.status))
-                    .frame(width: 10, height: 10)
-                    .overlay(Circle().stroke(Color.white.opacity(0.8), lineWidth: 2))
-                    .shadow(color: Color.deviceStatusColor(device.status).opacity(0.5), radius: 3)
-            }
+                    Image(systemName: deviceIcon)
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(AppColors.primary)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(device.hostname)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(AppColors.textPrimary)
-                    .lineLimit(1)
+                    Circle()
+                        .fill(Color.deviceStatusColor(device.status))
+                        .frame(width: 10, height: 10)
+                        .overlay(Circle().stroke(Color.white.opacity(0.8), lineWidth: 2))
+                }
 
-                HStack(spacing: 8) {
-                    if let nodeId = device.nodeId {
-                        Text(String(nodeId.prefix(8)))
-                            .font(.caption2)
-                            .foregroundStyle(AppColors.textSecondary)
-                            .monospaced()
-                    }
-
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(device.hostname)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(AppColors.textPrimary)
+                        .lineLimit(1)
+                    Text(device.deviceId)
+                        .font(.caption2)
+                        .foregroundStyle(AppColors.textSecondary)
+                        .lineLimit(1)
                     Text(device.osVersion)
                         .font(.caption2)
                         .foregroundStyle(AppColors.textSecondary)
                         .lineLimit(1)
                 }
 
-                if let heartbeat = device.lastHeartbeatAt {
-                    Text(heartbeat.relativeString)
-                        .font(.caption2)
-                        .foregroundStyle(AppColors.textSecondary.opacity(0.7))
+                Spacer()
+                VStack(alignment: .trailing, spacing: 6) {
+                    StatusBadge.deviceStatus(device.status)
+                    statusChip(priority.label, color: priority.color)
+                    if unreadCount > 0 {
+                        statusChip("新消息 \(unreadCount)", color: AppColors.error)
+                    }
                 }
             }
 
-            Spacer()
+            HStack(spacing: 10) {
+                signalPill(title: "OpenClaw", value: openClawInfo?.overview?.version ?? device.agentVersion, detail: openClawInfo?.model ?? "等待模型状态")
+                signalPill(title: "Agents", value: "\(agentCount)", detail: agentCount > 0 ? "\(onlineAgentCount) 在线" : (openClawInfo?.overview?.agentsSummary ?? "等待上报"))
+            }
 
-            if let metric = latestMetric {
-                HStack(spacing: 8) {
-                    UsageRing(value: metric.cpuUsage, label: "CPU", color: cpuColor(metric.cpuUsage), size: 36)
-                    UsageRing(value: metric.memoryUsage, label: "内存", color: memColor(metric.memoryUsage), size: 36)
-                    UsageRing(value: metric.diskUsage, label: "磁盘", color: diskColor(metric.diskUsage), size: 36)
+            HStack(spacing: 8) {
+                statusChip("心跳 \(device.lastHeartbeatAt?.relativeString ?? "暂无")", color: device.isOnline ? AppColors.success : AppColors.disabled)
+                statusChip(gatewaySummary, color: device.isOnline ? AppColors.primary : AppColors.disabled)
+            }
+
+            VStack(spacing: 10) {
+                if let metric = latestMetric, device.isOnline {
+                    usageRow(title: "CPU", usage: metric.cpuUsage, detail: "\(device.cpuModel) · \(device.cpuCores) 核")
+                    usageRow(title: "内存", usage: metric.memoryUsage, detail: "\(formattedBytes(metric.memoryUsed)) / \(device.formattedMemory)")
+                    usageRow(title: "磁盘", usage: metric.diskUsage, detail: "\(formattedBytes(metric.diskUsed)) / \(device.formattedDisk)")
+                } else {
+                    placeholderUsageRow(title: "CPU")
+                    placeholderUsageRow(title: "内存")
+                    placeholderUsageRow(title: "磁盘")
                 }
-            } else {
-                StatusBadge.deviceStatus(device.status)
+            }
+
+            HStack {
+                Text(device.isOnline ? "可直接进入设备工作区继续查看状态、命令和 agent。" : "设备不在线，优先确认心跳与连通性。")
+                    .font(.caption2)
+                    .foregroundStyle(AppColors.textSecondary)
+                    .lineLimit(2)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(AppColors.textSecondary)
             }
         }
-        .padding(14)
+        .padding(16)
         .cardStyle()
+    }
+
+    private func signalPill(title: String, value: String, detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(AppColors.primary.opacity(0.9))
+                    .frame(width: 6, height: 6)
+                Text(title)
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+            Text(value)
+                .font(.subheadline)
+                .fontWeight(.bold)
+                .foregroundStyle(AppColors.textTitle)
+            Text(detail)
+                .font(.caption2)
+                .foregroundStyle(AppColors.textSecondary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.white.opacity(0.28))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
+                .stroke(AppColors.borderColor, lineWidth: 1)
+        )
+    }
+
+    private func usageRow(title: String, usage: Double, detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(title)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(AppColors.textSecondary)
+                Spacer()
+                Text("\(Int(usage.rounded()))%")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundStyle(usageColor(usage))
+            }
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.white.opacity(0.22))
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(usageColor(usage))
+                        .frame(width: proxy.size.width * min(max(usage, 0), 100) / 100)
+                }
+            }
+            .frame(height: 8)
+            Text(detail)
+                .font(.caption2)
+                .foregroundStyle(AppColors.textSecondary)
+                .lineLimit(1)
+        }
+    }
+
+    private func placeholderUsageRow(title: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(AppColors.textSecondary)
+                .frame(width: 28, alignment: .leading)
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.white.opacity(0.22))
+                .frame(height: 8)
+            Text("--")
+                .font(.caption)
+                .foregroundStyle(AppColors.textSecondary)
+                .frame(width: 28, alignment: .trailing)
+        }
+    }
+
+    private func statusChip(_ text: String, color: Color) -> some View {
+        Text(text)
+            .font(.caption2)
+            .fontWeight(.semibold)
+            .foregroundStyle(color)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(color.opacity(0.12))
+            .clipShape(Capsule())
+            .lineLimit(1)
     }
 
     private var deviceIcon: String {
@@ -70,15 +206,39 @@ struct DeviceCardView: View {
         return "desktopcomputer"
     }
 
-    private func cpuColor(_ usage: Double) -> Color {
-        usage > 80 ? AppColors.error : usage > 50 ? AppColors.warning : AppColors.success
+    private func usageColor(_ usage: Double) -> Color {
+        usage > 80 ? AppColors.error : usage > 60 ? AppColors.warning : AppColors.success
     }
 
-    private func memColor(_ usage: Double) -> Color {
-        usage > 85 ? AppColors.error : usage > 60 ? AppColors.warning : AppColors.cyan
+    private func formattedBytes(_ bytes: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: bytes, countStyle: .binary)
     }
 
-    private func diskColor(_ usage: Double) -> Color {
-        usage > 90 ? AppColors.error : usage > 70 ? AppColors.warning : AppColors.primary
+    private func isAgentOnline(_ agent: OpenClawAgent) -> Bool {
+        guard let active = agent.active?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !active.isEmpty else { return false }
+        let lower = active.lowercased()
+        if ["true", "yes", "online", "active", "now"].contains(lower) {
+            return true
+        }
+        guard let age = parseActiveAge(lower) else { return false }
+        return age <= 3600
+    }
+
+    private func parseActiveAge(_ value: String) -> TimeInterval? {
+        let parts = value.split(separator: " ")
+        guard let token = parts.first else { return nil }
+        let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let unit = trimmed.last else { return nil }
+        let numberStr = trimmed.dropLast()
+        guard let num = Double(numberStr) else { return nil }
+        switch unit {
+        case "s": return num
+        case "m": return num * 60
+        case "h": return num * 3600
+        case "d": return num * 86400
+        case "w": return num * 604800
+        default: return nil
+        }
     }
 }
