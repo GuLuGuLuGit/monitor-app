@@ -7,14 +7,6 @@ struct DeviceDetailView: View {
         case commands = "命令"
         case agents = "Agent"
 
-        var subtitle: String {
-            switch self {
-            case .status: return "设备与 OpenClaw 运行面"
-            case .commands: return "常用控制与执行入口"
-            case .agents: return "设备中的 agent 会话"
-            }
-        }
-
         var icon: String {
             switch self {
             case .status: return "waveform.path.ecg"
@@ -146,7 +138,7 @@ struct DeviceDetailView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("设备工作区")
+                    Text("设备")
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundStyle(AppColors.textSecondary)
@@ -156,7 +148,7 @@ struct DeviceDetailView: View {
                         .foregroundStyle(AppColors.textTitle)
                     HStack(spacing: 8) {
                         StatusBadge.deviceStatus(currentDevice.status)
-                        pill(text: "心跳 \(currentDevice.lastHeartbeatAt?.relativeString ?? "暂无")")
+                        pill(text: "心跳 \(currentDevice.lastHeartbeatAt?.relativeString ?? "--")")
                     }
                 }
                 Spacer()
@@ -181,19 +173,19 @@ struct DeviceDetailView: View {
             summaryCard(
                 title: "设备状态",
                 value: currentDevice.deviceStatus == .online ? "在线" : (currentDevice.deviceStatus == .disabled ? "禁用" : "离线"),
-                detail: "最近心跳 \(currentDevice.lastHeartbeatAt?.relativeString ?? "暂无")",
+                detail: "最近心跳 \(currentDevice.lastHeartbeatAt?.relativeString ?? "--")",
                 accent: currentDevice.isOnline ? AppColors.success : AppColors.error
             )
             summaryCard(
                 title: "OpenClaw",
                 value: openClawInfo?.overview?.version ?? currentDevice.agentVersion,
-                detail: openClawInfo?.model ?? "等待模型信息",
+                detail: openClawInfo?.model ?? "待模型",
                 accent: AppColors.primary
             )
             summaryCard(
                 title: "Agents",
                 value: "\(agentList.count)",
-                detail: agentList.isEmpty ? (openClawInfo?.overview?.agentsSummary ?? "等待设备上报") : "\(agentList.filter(isAgentOnline).count) 在线",
+                detail: agentList.isEmpty ? (openClawInfo?.overview?.agentsSummary ?? "待上报") : "\(agentList.filter(isAgentOnline).count) 在线",
                 accent: AppColors.cyan
             )
             summaryCard(
@@ -236,15 +228,9 @@ struct DeviceDetailView: View {
                 Button {
                     selectedTab = tab
                 } label: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Label(tab.rawValue, systemImage: tab.icon)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                        Text(tab.subtitle)
-                            .font(.caption2)
-                            .foregroundStyle(selectedTab == tab ? AppColors.primary.opacity(0.9) : AppColors.textSecondary)
-                            .lineLimit(1)
-                    }
+                    Label(tab.rawValue, systemImage: tab.icon)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
                     .foregroundStyle(selectedTab == tab ? AppColors.primary : AppColors.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(14)
@@ -274,12 +260,6 @@ struct DeviceDetailView: View {
 
     private var statusWorkspace: some View {
         VStack(spacing: 16) {
-            introCard(
-                eyebrow: "状态",
-                title: "设备与 OpenClaw 运行面",
-                description: "先看状态，再决定是否执行命令或进入 agent 会话。这里收拢设备资源、OpenClaw 关键状态和技能载荷。"
-            )
-
             liveSignalsCard
             metricsChartCard
             systemInfoCard
@@ -295,14 +275,8 @@ struct DeviceDetailView: View {
 
     private var commandWorkspace: some View {
         VStack(spacing: 16) {
-            introCard(
-                eyebrow: "命令",
-                title: "OpenClaw 控制台",
-                description: "常用控制动作集中在这里。建议先执行状态查询或诊断，再做 restart、update、gateway 这类影响运行面的操作。"
-            )
-
             VStack(alignment: .leading, spacing: 14) {
-                Text("快速控制")
+                Text("控制")
                     .font(.headline)
                     .foregroundStyle(AppColors.textTitle)
                 CommandPanelView(device: currentDevice)
@@ -311,7 +285,7 @@ struct DeviceDetailView: View {
             .cardStyle()
 
             VStack(alignment: .leading, spacing: 12) {
-                Text("执行前检查")
+                Text("检查")
                     .font(.headline)
                     .foregroundStyle(AppColors.textTitle)
                 checklistRow("1. 先看设备是否持续在线，以及最近心跳是否正常。")
@@ -322,12 +296,12 @@ struct DeviceDetailView: View {
             .cardStyle()
 
             VStack(alignment: .leading, spacing: 12) {
-                Text("当前执行上下文")
+                Text("上下文")
                     .font(.headline)
                     .foregroundStyle(AppColors.textTitle)
                 infoRows([
                     ("设备状态", currentDevice.deviceStatus == .online ? "在线" : (currentDevice.deviceStatus == .disabled ? "禁用" : "离线")),
-                    ("最近心跳", currentDevice.lastHeartbeatAt?.relativeString ?? "暂无"),
+                    ("最近心跳", currentDevice.lastHeartbeatAt?.relativeString ?? "--"),
                     ("Gateway", openClawInfo?.overview?.gateway ?? "—"),
                     ("Node", openClawInfo?.overview?.node ?? "—"),
                     ("Dashboard", openClawInfo?.overview?.dashboard ?? "—"),
@@ -341,27 +315,21 @@ struct DeviceDetailView: View {
 
     private var agentWorkspace: some View {
         VStack(spacing: 16) {
-            introCard(
-                eyebrow: "Agents",
-                title: "设备中的 agent 会话",
-                description: "这里列出当前设备正在使用的 agents。先看在线情况与角色分工，再点击进入专用聊天页进行文本或语音沟通。"
-            )
-
             if let info = openClawInfo,
                !agentList.isEmpty || info.overview?.agentsSummary != nil {
                 VStack(alignment: .leading, spacing: 14) {
                     HStack {
-                        Text("Agent 名录")
+                        Text("Agents")
                             .font(.headline)
                             .foregroundStyle(AppColors.textTitle)
                         Spacer()
-                        Text(agentList.isEmpty ? (info.overview?.agentsSummary ?? "等待设备上报") : "\(agentList.filter(isAgentOnline).count) 在线 / \(agentList.count) 总数")
+                        Text(agentList.isEmpty ? (info.overview?.agentsSummary ?? "待上报") : "\(agentList.filter(isAgentOnline).count) 在线 / \(agentList.count) 总数")
                             .font(.caption)
                             .foregroundStyle(AppColors.textSecondary)
                     }
 
                     if agentList.isEmpty {
-                        emptyHint("设备还没有上报可用 agent 列表，等待下一次心跳上报。")
+                        emptyHint("无 Agents")
                     } else {
                         ForEach(agentList) { agent in
                             NavigationLink {
@@ -386,52 +354,21 @@ struct DeviceDetailView: View {
                 .cardStyle()
             } else {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Agent 名录")
+                    Text("Agents")
                         .font(.headline)
                         .foregroundStyle(AppColors.textTitle)
-                    emptyHint("等待设备上报 Agent 列表。列表到位后，可直接点击任意 agent 进入聊天页。")
+                    emptyHint("无 Agents")
                 }
                 .padding(20)
                 .cardStyle()
             }
-
-            VStack(alignment: .leading, spacing: 12) {
-                Text("会话说明")
-                    .font(.headline)
-                    .foregroundStyle(AppColors.textTitle)
-                checklistRow("点击某个 agent 进入专用聊天页，不在设备详情里堆叠消息。")
-                checklistRow("聊天页支持文本和语音输入，消息状态会显示发送中 / 处理中 / 失败。")
-                checklistRow("历史记录从服务端持久化命令中恢复，再次进入同一 agent 会继续显示。")
-            }
-            .padding(20)
-            .cardStyle()
         }
-    }
-
-    private func introCard(eyebrow: String, title: String, description: String) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(eyebrow)
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(AppColors.textSecondary)
-            Text(title)
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundStyle(AppColors.textTitle)
-            Text(description)
-                .font(.subheadline)
-                .foregroundStyle(AppColors.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .cardStyle()
     }
 
     private var liveSignalsCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Text("即时信号")
+                Text("资源")
                     .font(.headline)
                     .foregroundStyle(AppColors.textTitle)
                 Spacer()
@@ -447,7 +384,7 @@ struct DeviceDetailView: View {
                     signalBar(title: "磁盘", value: metric.diskUsage, detail: "\(formattedBytes(metric.diskUsed)) / \(currentDevice.formattedDisk)")
                 }
             } else {
-                emptyHint("设备离线或暂未上报实时指标。")
+                emptyHint("无指标")
             }
         }
         .padding(20)
@@ -487,7 +424,7 @@ struct DeviceDetailView: View {
         if !viewModel.metrics.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Text("资源趋势")
+                    Text("趋势")
                         .font(.headline)
                         .foregroundStyle(AppColors.textTitle)
                     Spacer()
@@ -549,7 +486,7 @@ struct DeviceDetailView: View {
 
     private var systemInfoCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("设备基础信息")
+            Text("设备信息")
                 .font(.headline)
                 .foregroundStyle(AppColors.textTitle)
 
@@ -570,7 +507,7 @@ struct DeviceDetailView: View {
 
     private var openClawOverviewCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("OpenClaw 概览")
+            Text("OpenClaw")
                 .font(.headline)
                 .foregroundStyle(AppColors.textTitle)
 
@@ -590,7 +527,7 @@ struct DeviceDetailView: View {
                     ("Agents", overview.agentsSummary ?? "—"),
                 ])
             } else {
-                emptyHint("暂无 OpenClaw 状态数据。")
+                emptyHint("无 OpenClaw 数据")
             }
         }
         .padding(20)

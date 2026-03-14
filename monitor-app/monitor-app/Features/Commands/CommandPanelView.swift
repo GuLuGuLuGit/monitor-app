@@ -11,19 +11,12 @@ struct CommandPanelView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            controlIntro
-
             ForEach(AgentCommand.CommandGroup.allCases, id: \.rawValue) { group in
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(group.label)
-                                .font(.headline)
-                                .foregroundStyle(AppColors.textTitle)
-                            Text(groupDescription(group))
-                                .font(.caption)
-                                .foregroundStyle(AppColors.textSecondary)
-                        }
+                        Text(group.label)
+                            .font(.headline)
+                            .foregroundStyle(AppColors.textTitle)
                         Spacer()
                         Text("\(group.types.count) 项")
                             .font(.caption2)
@@ -97,35 +90,8 @@ struct CommandPanelView: View {
         }
         .overlay {
             if viewModel.isSending {
-                LoadingOverlay(message: "发送命令中...")
+                LoadingOverlay(message: "发送中")
             }
-        }
-    }
-
-    private var controlIntro: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("OpenClaw 控制台")
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundStyle(AppColors.textTitle)
-            Text("建议先执行状态查询、健康诊断和日志定位，再决定是否执行 restart、update、gateway 这类会影响运行面的操作。")
-                .font(.subheadline)
-                .foregroundStyle(AppColors.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .cardStyle()
-    }
-
-    private func groupDescription(_ group: AgentCommand.CommandGroup) -> String {
-        switch group {
-        case .control:
-            return "直接控制 OpenClaw 运行面。危险动作前建议先确认当前状态。"
-        case .diagnose:
-            return "优先使用查询类命令定位问题，再决定是否执行控制动作。"
-        case .manage:
-            return "涉及配置、更新、会话和安全，建议在低干扰时段执行。"
         }
     }
 

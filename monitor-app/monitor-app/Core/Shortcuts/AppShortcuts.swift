@@ -4,7 +4,7 @@ import AppIntents
 
 struct CheckDeviceStatusIntent: AppIntent {
     static var title: LocalizedStringResource = "查看设备状态"
-    static var description: IntentDescription = "查看 OpenClaw 设备在线状态"
+    static var description: IntentDescription = "查看 OpenClaw 设备状态"
     static var openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
@@ -12,10 +12,10 @@ struct CheckDeviceStatusIntent: AppIntent {
             let overview: DeviceWorkspaceOverview = try await APIClient.shared.request(.dashboard)
             let s = overview.deviceSummary
             return .result(
-                dialog: "共 \(s.total) 台设备，\(s.online) 台在线，\(s.offline) 台离线。"
+                dialog: "共 \(s.total) 台设备，在线 \(s.online)，离线 \(s.offline)。"
             )
         } catch {
-            return .result(dialog: "无法获取设备状态，请检查网络或登录状态。")
+            return .result(dialog: "无法获取设备状态，请检查网络或登录。")
         }
     }
 }
@@ -69,7 +69,7 @@ struct OpenClawShortcuts: AppShortcutsProvider {
             intent: CheckDeviceStatusIntent(),
             phrases: [
                 "查看 \(.applicationName) 设备状态",
-                "检查 \(.applicationName) 在线设备",
+                "检查 \(.applicationName) 设备状态",
                 "\(.applicationName) 设备情况",
             ],
             shortTitle: "设备状态",

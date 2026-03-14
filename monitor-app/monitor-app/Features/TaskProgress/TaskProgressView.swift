@@ -65,7 +65,7 @@ struct TaskProgressView: View {
                     Text("\(client.latestProgress?.progress ?? 0)%")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundStyle(progressColor)
-                    Text(client.latestProgress?.status ?? "等待中")
+                    Text(client.latestProgress?.status ?? "等待")
                         .font(.caption)
                         .foregroundStyle(AppColors.textSecondary)
                 }

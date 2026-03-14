@@ -63,7 +63,7 @@ final class CommandViewModel {
             )
 
             let _: AgentCommand = try await APIClient.shared.request(.createCommand, body: request)
-            successMessage = "\(commandType.label) 命令已发送"
+            successMessage = "已发送 \(commandType.label)"
             await loadCommands(deviceId: deviceId)
             return true
         } catch let error as APIError {

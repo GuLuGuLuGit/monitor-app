@@ -22,7 +22,7 @@ struct DeviceWidgetSmallView: View {
                 .font(.system(size: 36, weight: .bold, design: .rounded))
                 .foregroundStyle(Color(hex: "00e5a0"))
 
-            Text("在线设备")
+            Text("在线")
                 .font(.caption2)
                 .foregroundStyle(Color(hex: "7a8ba8"))
 
@@ -64,7 +64,7 @@ struct DeviceWidgetMediumView: View {
                         .foregroundStyle(Color(hex: "7a8ba8"))
                 }
 
-                Text("设备在线")
+                Text("在线")
                     .font(.caption2)
                     .foregroundStyle(Color(hex: "7a8ba8"))
             }

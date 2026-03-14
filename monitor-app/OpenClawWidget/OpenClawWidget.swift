@@ -55,7 +55,7 @@ struct OpenClawWidgetEntryView: View {
             Text("\(entry.onlineCount)")
                 .font(.system(size: 36, weight: .bold, design: .rounded))
                 .foregroundStyle(.green)
-            Text("在线设备")
+            Text("在线")
                 .font(.caption2).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -89,7 +89,7 @@ struct OpenClawWidget: Widget {
                 .containerBackground(.background, for: .widget)
         }
         .configurationDisplayName("OpenClaw 设备监控")
-        .description("查看设备在线状态")
+        .description("查看设备状态")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }

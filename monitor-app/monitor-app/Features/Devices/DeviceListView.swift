@@ -123,7 +123,7 @@ struct DeviceListView: View {
                 if let device = selectedDevice {
                     DeviceDetailView(device: device)
                 } else {
-                    EmptyStateView(icon: "sidebar.left", title: "选择设备", subtitle: "从左侧设备工作台中选择一台设备查看状态、命令和 agent。")
+                    EmptyStateView(icon: "sidebar.left", title: "选择设备", subtitle: "从左侧选择设备")
                 }
             }
         }
@@ -157,11 +157,11 @@ struct DeviceListView: View {
                             filterStrip
                             if scopedDevices.isEmpty {
                                 if viewModel.devices.isEmpty {
-                                    EmptyStateView(icon: "desktopcomputer", title: "暂无设备", subtitle: "请先配对设备")
+                                    EmptyStateView(icon: "desktopcomputer", title: "暂无设备", subtitle: "添加设备")
                                 } else if activeLane != nil {
-                                    EmptyStateView(icon: "tray", title: "当前入口没有设备", subtitle: "切换到其他工作入口，或调整筛选条件后重试。")
+                                    EmptyStateView(icon: "tray", title: "暂无设备", subtitle: "切换入口或筛选")
                                 } else {
-                                    EmptyStateView(icon: "magnifyingglass", title: "无匹配结果", subtitle: "调整筛选条件后重试")
+                                    EmptyStateView(icon: "magnifyingglass", title: "无结果", subtitle: "调整筛选")
                                 }
                             } else {
                                 deviceSectionContent(useButtons: false)
@@ -188,30 +188,26 @@ struct DeviceListView: View {
 
     private var listHeroCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("OpenClaw 多设备控制台")
+            Text("设备")
                 .font(.caption)
                 .fontWeight(.semibold)
                 .foregroundStyle(AppColors.textSecondary)
-            Text("统一查看状态、下发命令、进入 agent 会话")
+            Text("设备列表")
                 .font(.title3)
                 .fontWeight(.bold)
                 .foregroundStyle(AppColors.textTitle)
-            Text("入口页只负责回答三件事：哪些设备在线、哪台设备需要处理、从哪里最快进入工作区。")
-                .font(.subheadline)
-                .foregroundStyle(AppColors.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 8) {
                 overviewChip("待关注 \(attentionDevices.count)", color: attentionDevices.isEmpty ? AppColors.disabled : AppColors.error)
                 overviewChip("在线 \(onlineCount)", color: AppColors.success)
-                overviewChip("稳定 \(max(onlineCount - attentionDevices.filter(\.isOnline).count, 0))", color: AppColors.primary)
+                overviewChip("正常 \(max(onlineCount - attentionDevices.filter(\.isOnline).count, 0))", color: AppColors.primary)
             }
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                 summaryTile(title: "总设备", value: "\(totalCount)", detail: "全部已接入机器", accent: AppColors.primary)
                 summaryTile(title: "在线", value: "\(onlineCount)", detail: "当前可操作", accent: AppColors.success)
-                summaryTile(title: "离线", value: "\(offlineCount)", detail: "等待恢复连接", accent: AppColors.error)
-                summaryTile(title: "禁用", value: "\(disabledCount)", detail: "已关闭控制", accent: AppColors.warning)
+                summaryTile(title: "离线", value: "\(offlineCount)", detail: "待恢复", accent: AppColors.error)
+                summaryTile(title: "禁用", value: "\(disabledCount)", detail: "已关闭", accent: AppColors.warning)
             }
 
             VStack(alignment: .leading, spacing: 10) {
@@ -222,7 +218,7 @@ struct DeviceListView: View {
                         .foregroundStyle(AppColors.textSecondary)
                     Spacer()
                     if activeLane != nil {
-                        Button("查看全部") {
+                        Button("全部") {
                             self.activeLane = nil
                         }
                         .font(.caption2)
@@ -232,9 +228,9 @@ struct DeviceListView: View {
                 }
 
                 HStack(spacing: 10) {
-                    laneCard(.alerts, count: alertCount, detail: "优先处理")
-                    laneCard(.unread, count: unreadCount, detail: "新消息")
-                    laneCard(.offline, count: offlineLaneCount, detail: "等待恢复")
+                    laneCard(.alerts, count: alertCount, detail: "异常")
+                    laneCard(.unread, count: unreadCount, detail: "未读")
+                    laneCard(.offline, count: offlineLaneCount, detail: "离线")
                 }
             }
         }
@@ -365,7 +361,7 @@ struct DeviceListView: View {
     private func deviceSections(useButtons: Bool) -> some View {
         VStack(spacing: 14) {
             if !attentionDevices.isEmpty {
-                sectionHeader("优先处理", detail: "\(attentionDevices.count) 台")
+                sectionHeader("异常", detail: "\(attentionDevices.count) 台")
                 ForEach(attentionDevices) { device in
                     deviceEntry(device, useButtons: useButtons, dimmed: false)
                 }
@@ -373,7 +369,7 @@ struct DeviceListView: View {
 
             let onlineRegular = regularDevices.filter { $0.status == 1 }
             if !onlineRegular.isEmpty {
-                sectionHeader("在线设备", detail: "\(onlineRegular.count) 台")
+                sectionHeader("在线", detail: "\(onlineRegular.count) 台")
                 ForEach(onlineRegular) { device in
                     deviceEntry(device, useButtons: useButtons, dimmed: false)
                 }
@@ -381,7 +377,7 @@ struct DeviceListView: View {
 
             let offlineRegular = regularDevices.filter { $0.status != 1 }
             if !offlineRegular.isEmpty {
-                sectionHeader("离线 / 禁用", detail: "\(offlineRegular.count) 台")
+                sectionHeader("离线/禁用", detail: "\(offlineRegular.count) 台")
                 ForEach(offlineRegular) { device in
                     deviceEntry(device, useButtons: useButtons, dimmed: true)
                 }

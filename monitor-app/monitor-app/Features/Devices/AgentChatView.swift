@@ -208,7 +208,7 @@ struct AgentChatView: View {
                                     statusCapsule(text: "\(sessions) 会话", color: AppColors.primary)
                                 }
                                 if unreadAgentIds.contains(agent.id) {
-                                    statusCapsule(text: "新消息", color: AppColors.error)
+                                    statusCapsule(text: "未读", color: AppColors.error)
                                 }
                             }
                         }

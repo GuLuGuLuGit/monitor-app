@@ -22,15 +22,15 @@ struct DeviceCardView: View {
     }
 
     private var gatewaySummary: String {
-        guard let raw = openClawInfo?.overview?.gateway, !raw.isEmpty else { return "等待网关状态" }
+        guard let raw = openClawInfo?.overview?.gateway, !raw.isEmpty else { return "待网关" }
         let short = raw.count > 12 ? "\(raw.prefix(12))..." : raw
         return "Gateway \(short)"
     }
 
     private var priority: (label: String, color: Color) {
-        if device.status != 1 { return ("待处理", AppColors.error) }
-        if agentCount == 0 || onlineAgentCount == 0 { return ("需确认", AppColors.warning) }
-        return ("稳定", AppColors.success)
+        if device.status != 1 { return ("异常", AppColors.error) }
+        if agentCount == 0 || onlineAgentCount == 0 { return ("关注", AppColors.warning) }
+        return ("正常", AppColors.success)
     }
 
     var body: some View {
@@ -72,14 +72,14 @@ struct DeviceCardView: View {
                     StatusBadge.deviceStatus(device.status)
                     statusChip(priority.label, color: priority.color)
                     if unreadCount > 0 {
-                        statusChip("新消息 \(unreadCount)", color: AppColors.error)
+                        statusChip("未读 \(unreadCount)", color: AppColors.error)
                     }
                 }
             }
 
             HStack(spacing: 10) {
-                signalPill(title: "OpenClaw", value: openClawInfo?.overview?.version ?? device.agentVersion, detail: openClawInfo?.model ?? "等待模型状态")
-                signalPill(title: "Agents", value: "\(agentCount)", detail: agentCount > 0 ? "\(onlineAgentCount) 在线" : (openClawInfo?.overview?.agentsSummary ?? "等待上报"))
+                signalPill(title: "OpenClaw", value: openClawInfo?.overview?.version ?? device.agentVersion, detail: openClawInfo?.model ?? "待模型")
+                signalPill(title: "Agents", value: "\(agentCount)", detail: agentCount > 0 ? "\(onlineAgentCount) 在线" : (openClawInfo?.overview?.agentsSummary ?? "待上报"))
             }
 
             HStack(spacing: 8) {

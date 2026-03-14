@@ -41,8 +41,8 @@ extension AgentCommand {
 
         var label: String {
             switch self {
-            case .pending: "待执行"
-            case .running: "执行中"
+            case .pending: "等待"
+            case .running: "处理中"
             case .success: "成功"
             case .failed: "失败"
             case .timeout: "超时"
