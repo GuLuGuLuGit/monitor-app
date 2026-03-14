@@ -70,19 +70,69 @@ extension OpenClawInfo {
     }
 
     static func parseAgentsResult(_ text: String) -> [OpenClawAgent] {
-        guard let data = text.data(using: .utf8) else { return [] }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+
+        if let agents = decodeAgentsJSON(trimmed) {
+            return agents
+        }
+
+        // Some agents may return a JSON string or wrap the array in extra text.
+        if let data = trimmed.data(using: .utf8),
+           let wrapped = try? JSONDecoder().decode(String.self, from: data),
+           let agents = decodeAgentsJSON(wrapped.trimmingCharacters(in: .whitespacesAndNewlines)) {
+            return agents
+        }
+
+        if let start = trimmed.firstIndex(of: "["),
+           let end = trimmed.lastIndex(of: "]"),
+           start <= end {
+            let jsonArray = String(trimmed[start...end])
+            if let agents = decodeAgentsJSON(jsonArray) {
+                return agents
+            }
+        }
+
+        return []
+    }
+
+    private static func decodeAgentsJSON(_ text: String) -> [OpenClawAgent]? {
+        guard let data = text.data(using: .utf8) else { return nil }
         if let decoded = try? JSONDecoder().decode([OpenClawAgent].self, from: data) {
             return decoded
         }
-        if let raw = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
-            return raw.enumerated().compactMap { idx, item in
-                let id = (item["id"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                guard !id.isEmpty else { return nil }
-                let name = (item["name"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
-                return OpenClawAgent(id: id, name: (name?.isEmpty == false ? name! : id))
+        if let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let rawAgents = object["agents"] as? [[String: Any]] {
+                return mapAgents(rawAgents)
+            }
+            if let rawAgents = object["data"] as? [[String: Any]] {
+                return mapAgents(rawAgents)
             }
         }
-        return []
+        if let raw = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+            return mapAgents(raw)
+        }
+        return nil
+    }
+
+    private static func mapAgents(_ raw: [[String: Any]]) -> [OpenClawAgent] {
+        raw.enumerated().compactMap { idx, item in
+            let id = (item["id"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            guard !id.isEmpty else { return nil }
+            let name = (item["name"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+            var sessions: Int?
+            if let s = item["sessions"] as? Int { sessions = s }
+            else if let s = item["sessions"] as? String, let n = Int(s) { sessions = n }
+            let active = item["active"] as? String
+            let bootstrap = item["bootstrap"] as? String
+            return OpenClawAgent(
+                id: id,
+                name: (name?.isEmpty == false ? name! : "agent-\(idx)"),
+                sessions: sessions,
+                active: active,
+                bootstrap: bootstrap
+            )
+        }
     }
 }
 

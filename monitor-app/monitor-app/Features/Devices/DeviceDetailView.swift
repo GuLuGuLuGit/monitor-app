@@ -40,7 +40,6 @@ struct DeviceDetailView: View {
                 }
                 .refreshable {
                     await viewModel.load()
-                    await viewModel.ensureAgentsLoaded(force: true)
                     await viewModel.loadMetrics()
                     await viewModel.loadSkills()
                 }
@@ -265,7 +264,7 @@ struct DeviceDetailView: View {
     @ViewBuilder
     private var agentMessageSection: some View {
         if let info = viewModel.openClawInfo,
-           (info.agents ?? []).isEmpty == false || info.overview?.agentsSummary != nil || viewModel.isLoadingAgents {
+           (info.agents ?? []).isEmpty == false || info.overview?.agentsSummary != nil {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Image(systemName: "message.fill")
@@ -274,11 +273,7 @@ struct DeviceDetailView: View {
                         .font(.headline)
                         .foregroundStyle(AppColors.textTitle)
                     Spacer()
-                    if viewModel.isLoadingAgents {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                            .tint(AppColors.primary)
-                    } else if let agents = info.agents, !agents.isEmpty {
+                    if let agents = info.agents, !agents.isEmpty {
                         Text("\(agents.count)")
                             .font(.caption)
                             .foregroundStyle(AppColors.textSecondary)
@@ -309,24 +304,9 @@ struct DeviceDetailView: View {
                         .buttonStyle(.plain)
                     }
                 } else {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(viewModel.isLoadingAgents ? "正在获取当前设备的 Agent 列表" : "暂未获取到 Agent 列表")
-                            .font(.caption)
-                            .foregroundStyle(AppColors.textSecondary)
-                        if let agentsLoadError = viewModel.agentsLoadError, !agentsLoadError.isEmpty {
-                            Text(agentsLoadError)
-                                .font(.caption2)
-                                .foregroundStyle(AppColors.error)
-                        }
-                        Button {
-                            Task { await viewModel.ensureAgentsLoaded(force: true) }
-                        } label: {
-                            Text("重试获取")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(AppColors.primary)
-                        }
-                    }
+                    Text("等待设备上报 Agent 列表")
+                        .font(.caption)
+                        .foregroundStyle(AppColors.textSecondary)
                 }
             }
             .padding()
