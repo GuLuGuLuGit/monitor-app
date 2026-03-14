@@ -34,7 +34,7 @@ struct DeviceCardView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
                 ZStack(alignment: .bottomTrailing) {
                     RoundedRectangle(cornerRadius: 16)
@@ -57,11 +57,7 @@ struct DeviceCardView: View {
                         .fontWeight(.semibold)
                         .foregroundStyle(AppColors.textPrimary)
                         .lineLimit(1)
-                    Text(device.deviceId)
-                        .font(.caption2)
-                        .foregroundStyle(AppColors.textSecondary)
-                        .lineLimit(1)
-                    Text(device.osVersion)
+                    Text("\(device.deviceId) · \(device.osVersion)")
                         .font(.caption2)
                         .foregroundStyle(AppColors.textSecondary)
                         .lineLimit(1)
@@ -77,7 +73,7 @@ struct DeviceCardView: View {
                 }
             }
 
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 signalPill(title: "OpenClaw", value: openClawInfo?.overview?.version ?? device.agentVersion, detail: openClawInfo?.model ?? "待模型")
                 signalPill(title: "Agents", value: "\(agentCount)", detail: agentCount > 0 ? "\(onlineAgentCount) 在线" : (openClawInfo?.overview?.agentsSummary ?? "待上报"))
             }
@@ -99,18 +95,12 @@ struct DeviceCardView: View {
                 }
             }
 
-            HStack {
-                Text(device.isOnline ? "可直接进入设备工作区继续查看状态、命令和 agent。" : "设备不在线，优先确认心跳与连通性。")
-                    .font(.caption2)
-                    .foregroundStyle(AppColors.textSecondary)
-                    .lineLimit(2)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundStyle(AppColors.textSecondary)
-            }
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(AppColors.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .padding(16)
+        .padding(14)
         .cardStyle()
     }
 
@@ -135,9 +125,9 @@ struct DeviceCardView: View {
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(Color.white.opacity(0.28))
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
+            .padding(10)
+            .background(Color.white.opacity(0.28))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
                 .stroke(AppColors.borderColor, lineWidth: 1)

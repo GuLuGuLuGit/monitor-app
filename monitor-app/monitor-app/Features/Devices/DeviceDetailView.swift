@@ -43,10 +43,6 @@ struct DeviceDetailView: View {
         agentList.filter(isAgentOnline).count
     }
 
-    private var latestMetric: SystemMetric? {
-        viewModel.metrics.max(by: { $0.metricTime < $1.metricTime }) ?? currentDevice.latestMetric
-    }
-
     var body: some View {
         ZStack {
             AppColors.gradientBg.ignoresSafeArea()
@@ -265,162 +261,51 @@ struct DeviceDetailView: View {
 
     private var statusWorkspace: some View {
         VStack(spacing: 16) {
-            liveSignalsCard
             metricsChartCard
-            systemInfoCard
-            openClawOverviewCard
 
-            if let channels = openClawInfo?.channels, !channels.isEmpty {
-                channelsCard(channels)
-            }
-
-            skillsSection
+            technicalDetails
         }
     }
 
     private var commandWorkspace: some View {
         VStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("控制")
-                    .font(.headline)
-                    .foregroundStyle(AppColors.textTitle)
-                CommandPanelView(device: currentDevice)
-            }
-            .padding(20)
-            .cardStyle()
-
-            VStack(alignment: .leading, spacing: 12) {
-                Text("检查")
-                    .font(.headline)
-                    .foregroundStyle(AppColors.textTitle)
-                checklistRow("1. 先看设备是否持续在线，以及最近心跳是否正常。")
-                checklistRow("2. 先跑状态查询 / 健康诊断，再决定是否执行重启或更新。")
-                checklistRow("3. Gateway、Sessions、Update 类命令优先在空闲时段执行。")
-            }
-            .padding(20)
-            .cardStyle()
-
-            VStack(alignment: .leading, spacing: 12) {
-                Text("上下文")
-                    .font(.headline)
-                    .foregroundStyle(AppColors.textTitle)
-                infoRows([
-                    ("设备状态", currentDevice.deviceStatus == .online ? "在线" : (currentDevice.deviceStatus == .disabled ? "禁用" : "离线")),
-                    ("最近心跳", currentDevice.lastHeartbeatAt?.relativeString ?? "--"),
-                    ("Gateway", openClawInfo?.overview?.gateway ?? "—"),
-                    ("Node", openClawInfo?.overview?.node ?? "—"),
-                    ("Dashboard", openClawInfo?.overview?.dashboard ?? "—"),
-                    ("Model", openClawInfo?.model ?? "—"),
-                ])
-            }
-            .padding(20)
-            .cardStyle()
+            CommandPanelView(device: currentDevice)
         }
     }
 
     private var agentWorkspace: some View {
-        VStack(spacing: 16) {
-            if let info = openClawInfo,
-               !agentList.isEmpty || info.overview?.agentsSummary != nil {
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack {
-                        Text("Agents")
-                            .font(.headline)
-                            .foregroundStyle(AppColors.textTitle)
-                        Spacer()
-                        Text(agentList.isEmpty ? (info.overview?.agentsSummary ?? "待上报") : "\(onlineAgentCount) 在线 / \(agentList.count) 总数")
-                            .font(.caption)
-                            .foregroundStyle(AppColors.textSecondary)
-                    }
-
-                    if agentList.isEmpty {
-                        emptyHint("无 Agents")
-                    } else {
-                        ForEach(agentList) { agent in
-                            NavigationLink {
-                                AgentChatView(
-                                    agents: agentList,
-                                    agentsSummary: info.overview?.agentsSummary,
-                                    deviceId: currentDevice.deviceId,
-                                    deviceInternalId: currentDevice.id,
-                                    initialAgentId: agent.id,
-                                    showAgentSelector: false
-                                )
-                                .navigationTitle(agent.name)
-                                .navigationBarTitleDisplayMode(.inline)
-                            } label: {
-                                agentDirectoryRow(agent)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-                .padding(20)
-                .cardStyle()
-            } else {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Agents")
-                        .font(.headline)
-                        .foregroundStyle(AppColors.textTitle)
-                    emptyHint("无 Agents")
-                }
-                .padding(20)
-                .cardStyle()
-            }
-        }
-    }
-
-    private var liveSignalsCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("资源")
+                Text("Agents")
                     .font(.headline)
                     .foregroundStyle(AppColors.textTitle)
                 Spacer()
-                if latestMetric != nil {
-                    pill(text: "实时指标")
-                }
-            }
-
-            if let metric = latestMetric {
-                VStack(spacing: 12) {
-                    signalBar(title: "CPU", value: metric.cpuUsage, detail: "\(currentDevice.cpuModel) · \(currentDevice.cpuCores) 核")
-                    signalBar(title: "内存", value: metric.memoryUsage, detail: "\(formattedBytes(metric.memoryUsed)) / \(currentDevice.formattedMemory)")
-                    signalBar(title: "磁盘", value: metric.diskUsage, detail: "\(formattedBytes(metric.diskUsed)) / \(currentDevice.formattedDisk)")
-                }
-            } else {
-                emptyHint("无指标")
-            }
-        }
-        .padding(20)
-        .cardStyle()
-    }
-
-    private func signalBar(title: String, value: Double, detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
+                Text(agentList.isEmpty ? (openClawInfo?.overview?.agentsSummary ?? "待上报") : "\(onlineAgentCount) 在线 / \(agentList.count) 总数")
+                    .font(.caption)
                     .foregroundStyle(AppColors.textSecondary)
-                Spacer()
-                signalPill(value: value)
             }
 
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.white.opacity(0.35))
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(signalColor(for: value))
-                        .frame(width: proxy.size.width * min(max(value, 0), 100) / 100)
+            if agentList.isEmpty {
+                emptyHint("无 Agents")
+            } else {
+                ForEach(agentList) { agent in
+                    NavigationLink {
+                        AgentChatView(
+                            agents: agentList,
+                            agentsSummary: openClawInfo?.overview?.agentsSummary,
+                            deviceId: currentDevice.deviceId,
+                            deviceInternalId: currentDevice.id,
+                            initialAgentId: agent.id,
+                            showAgentSelector: false
+                        )
+                        .navigationTitle(agent.name)
+                        .navigationBarTitleDisplayMode(.inline)
+                    } label: {
+                        agentDirectoryRow(agent)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
-            .frame(height: 10)
-
-            Text(detail)
-                .font(.caption)
-                .foregroundStyle(AppColors.textSecondary)
         }
     }
 
@@ -489,12 +374,65 @@ struct DeviceDetailView: View {
         }
     }
 
+    @ViewBuilder
+    private var technicalDetails: some View {
+        if shouldShowTechnicalDetails {
+            DisclosureGroup {
+                VStack(alignment: .leading, spacing: 12) {
+                    DisclosureGroup("设备信息") {
+                        systemInfoCard
+                            .padding(.top, 10)
+                    }
+
+                    DisclosureGroup("OpenClaw") {
+                        openClawOverviewCard
+                            .padding(.top, 10)
+                    }
+
+                    if let channels = openClawInfo?.channels, !channels.isEmpty {
+                        DisclosureGroup("Channels") {
+                            channelsCard(channels)
+                                .padding(.top, 10)
+                        }
+                    }
+
+                    if openClawInfo?.diagnosis != nil {
+                        DisclosureGroup("诊断") {
+                            diagnosisCard
+                                .padding(.top, 10)
+                        }
+                    }
+
+                    if !viewModel.skills.isEmpty {
+                        DisclosureGroup("Skills") {
+                            skillsSection
+                                .padding(.top, 10)
+                        }
+                    }
+                }
+                .padding(.top, 12)
+            } label: {
+                HStack {
+                    Text("高级信息")
+                        .font(.headline)
+                        .foregroundStyle(AppColors.textTitle)
+                    Spacer()
+                    Text("排障时查看")
+                        .font(.caption)
+                        .foregroundStyle(AppColors.textSecondary)
+                }
+            }
+            .padding(20)
+            .cardStyle()
+        }
+    }
+
+    private var shouldShowTechnicalDetails: Bool {
+        openClawInfo != nil || !viewModel.skills.isEmpty
+    }
+
     private var systemInfoCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("设备信息")
-                .font(.headline)
-                .foregroundStyle(AppColors.textTitle)
-
             infoRows([
                 ("设备 ID", currentDevice.deviceId),
                 ("Node ID", currentDevice.nodeId ?? "—"),
@@ -506,16 +444,10 @@ struct DeviceDetailView: View {
                 ("注册时间", formattedDate(currentDevice.registeredAt)),
             ])
         }
-        .padding(20)
-        .cardStyle()
     }
 
     private var openClawOverviewCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("OpenClaw")
-                .font(.headline)
-                .foregroundStyle(AppColors.textTitle)
-
             if let overview = openClawInfo?.overview {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                     overviewStatusTile(title: "Gateway", value: overview.gateway ?? "—")
@@ -535,8 +467,20 @@ struct DeviceDetailView: View {
                 emptyHint("无 OpenClaw 数据")
             }
         }
-        .padding(20)
-        .cardStyle()
+    }
+
+    private var diagnosisCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if let diagnosis = openClawInfo?.diagnosis {
+                infoRows([
+                    ("可用技能", "\(diagnosis.skillsEligible ?? 0)"),
+                    ("缺失技能", "\(diagnosis.skillsMissing ?? 0)"),
+                    ("通路问题", diagnosis.channelIssues ?? "—"),
+                ])
+            } else {
+                emptyHint("无诊断数据")
+            }
+        }
     }
 
     private func infoRows(_ rows: [(String, String)]) -> some View {
@@ -590,10 +534,6 @@ struct DeviceDetailView: View {
 
     private func channelsCard(_ channels: [OpenClawChannel]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Channels")
-                .font(.headline)
-                .foregroundStyle(AppColors.textTitle)
-
             ForEach(channels) { channel in
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
@@ -626,23 +566,15 @@ struct DeviceDetailView: View {
                 .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
             }
         }
-        .padding(20)
-        .cardStyle()
     }
 
     @ViewBuilder
     private var skillsSection: some View {
         if !viewModel.skills.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("Skills")
-                        .font(.headline)
-                        .foregroundStyle(AppColors.textTitle)
-                    Spacer()
-                    Text("\(viewModel.skills.count) / \(viewModel.skillTotal)")
-                        .font(.caption)
-                        .foregroundStyle(AppColors.textSecondary)
-                }
+                Text("\(viewModel.skills.count) / \(viewModel.skillTotal)")
+                    .font(.caption)
+                    .foregroundStyle(AppColors.textSecondary)
 
                 FlowLayout(spacing: 8) {
                     ForEach(viewModel.skills) { skill in
@@ -650,8 +582,6 @@ struct DeviceDetailView: View {
                     }
                 }
             }
-            .padding(20)
-            .cardStyle()
         }
     }
 
@@ -687,23 +617,6 @@ struct DeviceDetailView: View {
         for c in name.unicodeScalars { h = ((h &<< 5) &- h) &+ Int(c.value) }
         let idx = abs(h) % palettes.count
         return (palettes[idx].0, palettes[idx].1)
-    }
-
-    private func checklistRow(_ text: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.caption)
-                .foregroundStyle(AppColors.primary)
-                .padding(.top, 2)
-            Text(text)
-                .font(.subheadline)
-                .foregroundStyle(AppColors.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer()
-        }
-        .padding(14)
-        .background(Color.white.opacity(0.28))
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
     }
 
     private func emptyHint(_ text: String) -> some View {
@@ -779,18 +692,6 @@ struct DeviceDetailView: View {
             .clipShape(Capsule())
     }
 
-    private func signalPill(value: Double) -> some View {
-        let color = signalColor(for: value)
-        return Text("\(Int(value.rounded()))%")
-            .font(.caption)
-            .fontWeight(.bold)
-            .foregroundStyle(color)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(color.opacity(0.12))
-            .clipShape(Capsule())
-    }
-
     private func stateChip(for value: String) -> some View {
         let lower = value.lowercased()
         let color: Color
@@ -812,14 +713,6 @@ struct DeviceDetailView: View {
 
     private func isAgentOnline(_ agent: OpenClawAgent) -> Bool {
         agent.isLikelyOnline(recentActivityAt: viewModel.recentAgentActivity[agent.id])
-    }
-
-    private func signalColor(for value: Double) -> Color {
-        switch value {
-        case 80...: return AppColors.error
-        case 60...: return AppColors.warning
-        default: return AppColors.success
-        }
     }
 
     private func formattedDate(_ date: Date) -> String {

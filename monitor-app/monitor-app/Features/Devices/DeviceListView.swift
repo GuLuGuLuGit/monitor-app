@@ -188,15 +188,6 @@ struct DeviceListView: View {
 
     private var listHeroCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("设备")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(AppColors.textSecondary)
-            Text("设备列表")
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundStyle(AppColors.textTitle)
-
             HStack(spacing: 8) {
                 overviewChip("待关注 \(attentionDevices.count)", color: attentionDevices.isEmpty ? AppColors.disabled : AppColors.error)
                 overviewChip("在线 \(onlineCount)", color: AppColors.success)
@@ -212,10 +203,6 @@ struct DeviceListView: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Text("工作入口")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(AppColors.textSecondary)
                     Spacer()
                     if activeLane != nil {
                         Button("全部") {
@@ -226,7 +213,6 @@ struct DeviceListView: View {
                         .foregroundStyle(AppColors.primary)
                     }
                 }
-
                 HStack(spacing: 10) {
                     laneCard(.alerts, count: alertCount, detail: "异常")
                     laneCard(.unread, count: unreadCount, detail: "未读")

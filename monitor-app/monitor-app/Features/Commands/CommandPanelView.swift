@@ -34,8 +34,11 @@ struct CommandPanelView: View {
                         }
                     }
                 }
-                .padding(18)
-                .cardStyle()
+                if group != AgentCommand.CommandGroup.allCases.last {
+                    Divider()
+                        .background(AppColors.borderColor)
+                        .padding(.top, 4)
+                }
             }
 
             if let msg = viewModel.successMessage {
