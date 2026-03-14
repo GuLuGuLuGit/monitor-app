@@ -480,17 +480,18 @@ struct AgentChatView: View {
             unreadAgentIds.remove(agentId)
         }
         if event.role == "assistant" {
+            let resolvedStatus: Int8 = event.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? event.status : 2
             let msg = ChatMessage(
                 id: "reply-\(event.commandId)",
                 role: .assistant,
                 content: event.content,
                 time: event.createdAt,
-                status: event.status,
+                status: resolvedStatus,
                 inputType: .text
             )
             if isActive {
                 appendOrReplace(msg)
-                updateUserStatus(commandId: event.commandId, status: event.status)
+                updateUserStatus(commandId: event.commandId, status: resolvedStatus)
             } else {
                 unreadAgentIds.insert(agentId)
             }
