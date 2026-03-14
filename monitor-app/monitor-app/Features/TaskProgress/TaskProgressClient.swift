@@ -19,9 +19,7 @@ final class TaskProgressClient {
         reconnectAttempts = 0
 
         await loadHistory(commandId: commandId)
-
-        let token = await KeychainStore.shared.getToken()
-        connectWebSocket(commandId: commandId, token: token)
+        await connectWebSocket(commandId: commandId)
     }
 
     func disconnect() {
@@ -30,13 +28,21 @@ final class TaskProgressClient {
         isConnected = false
     }
 
-    private func connectWebSocket(commandId: Int64, token: String?) {
-        guard let token else {
-            errorMessage = "未登录"
+    private func connectWebSocket(commandId: Int64) async {
+        let ticket: WSTicketResponse
+        do {
+            ticket = try await APIClient.shared.request(
+                .wsTicket,
+                body: WSTicketRequest(scope: "task_progress", deviceId: nil, commandId: commandId)
+            )
+        } catch {
+            errorMessage = error.localizedDescription
+            isConnected = false
+            await scheduleReconnect()
             return
         }
 
-        let urlString = "\(AppConfig.wsBaseURL)/admin/ws/tasks/\(commandId)/progress?token=\(token)"
+        let urlString = "\(AppConfig.wsBaseURL)/admin/ws/tasks/\(commandId)/progress?ticket=\(ticket.ticket)"
         guard let url = URL(string: urlString) else { return }
 
         wsTask = URLSession.shared.webSocketTask(with: url)
@@ -83,8 +89,7 @@ final class TaskProgressClient {
 
         try? await Task.sleep(for: .seconds(delay))
         guard !isConnected else { return }
-        let token = await KeychainStore.shared.getToken()
-        connectWebSocket(commandId: commandId, token: token)
+        await connectWebSocket(commandId: commandId)
     }
 
     private func loadHistory(commandId: Int64) async {

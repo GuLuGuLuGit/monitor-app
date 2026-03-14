@@ -12,6 +12,7 @@ enum APIEndpoint {
     case resetPassword
     case refreshToken
     case me
+    case wsTicket
 
     // Dashboard
     case dashboard
@@ -53,6 +54,7 @@ enum APIEndpoint {
         case .resetPassword:            "/admin/auth/reset-password"
         case .refreshToken:             "/admin/auth/refresh"
         case .me:                       "/admin/auth/me"
+        case .wsTicket:                 "/admin/ws-ticket"
         case .dashboard:                "/admin/dashboard"
         case .devices:                  "/admin/devices"
         case .device(let id):           "/admin/devices/\(id)"
@@ -74,7 +76,7 @@ enum APIEndpoint {
 
     var method: HTTPMethod {
         switch self {
-        case .login, .register, .sendCode, .resetPassword, .refreshToken, .createCommand, .pairingConfirm, .registerPushToken:
+        case .login, .register, .sendCode, .resetPassword, .refreshToken, .wsTicket, .createCommand, .pairingConfirm, .registerPushToken:
             .POST
         case .deviceStatus:
             .PUT

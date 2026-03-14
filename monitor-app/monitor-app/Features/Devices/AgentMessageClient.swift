@@ -16,8 +16,7 @@ final class AgentMessageClient {
         self.deviceId = deviceId
         reconnectAttempts = 0
 
-        let token = await KeychainStore.shared.getToken()
-        connectWebSocket(deviceId: deviceId, token: token)
+        await connectWebSocket(deviceId: deviceId)
     }
 
     func disconnect() {
@@ -26,9 +25,20 @@ final class AgentMessageClient {
         isConnected = false
     }
 
-    private func connectWebSocket(deviceId: String, token: String?) {
-        guard let token else { return }
-        let urlString = "\(AppConfig.wsBaseURL)/admin/ws/agents/\(deviceId)/messages?token=\(token)"
+    private func connectWebSocket(deviceId: String) async {
+        let ticket: WSTicketResponse
+        do {
+            ticket = try await APIClient.shared.request(
+                .wsTicket,
+                body: WSTicketRequest(scope: "agent_messages", deviceId: deviceId, commandId: nil)
+            )
+        } catch {
+            isConnected = false
+            await scheduleReconnect()
+            return
+        }
+
+        let urlString = "\(AppConfig.wsBaseURL)/admin/ws/agents/\(deviceId)/messages?ticket=\(ticket.ticket)"
         guard let url = URL(string: urlString) else { return }
 
         wsTask = URLSession.shared.webSocketTask(with: url)
@@ -73,8 +83,7 @@ final class AgentMessageClient {
 
         try? await Task.sleep(for: .seconds(delay))
         guard !isConnected else { return }
-        let token = await KeychainStore.shared.getToken()
-        connectWebSocket(deviceId: deviceId, token: token)
+        await connectWebSocket(deviceId: deviceId)
     }
 }
 
