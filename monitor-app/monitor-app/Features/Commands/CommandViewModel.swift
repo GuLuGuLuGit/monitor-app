@@ -100,16 +100,16 @@ struct PublicKeyResponse: Decodable {
 
 struct CommandPayload: Encodable {
     let commandType: String
-    let params: [String: AnyCodable]?
+    let commandParams: [String: AnyCodable]?
 
     init(commandType: String, params: [String: Any]?) {
         self.commandType = commandType
-        self.params = params?.mapValues { AnyCodable($0) }
+        self.commandParams = params?.mapValues { AnyCodable($0) }
     }
 
     enum CodingKeys: String, CodingKey {
         case commandType = "command_type"
-        case params
+        case commandParams = "command_params"
     }
 }
 
