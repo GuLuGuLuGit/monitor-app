@@ -309,9 +309,24 @@ struct DeviceDetailView: View {
                         .buttonStyle(.plain)
                     }
                 } else {
-                    Text(viewModel.isLoadingAgents ? "正在获取当前设备的 Agent 列表" : "暂未获取到 Agent 列表")
-                        .font(.caption)
-                        .foregroundStyle(AppColors.textSecondary)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(viewModel.isLoadingAgents ? "正在获取当前设备的 Agent 列表" : "暂未获取到 Agent 列表")
+                            .font(.caption)
+                            .foregroundStyle(AppColors.textSecondary)
+                        if let agentsLoadError = viewModel.agentsLoadError, !agentsLoadError.isEmpty {
+                            Text(agentsLoadError)
+                                .font(.caption2)
+                                .foregroundStyle(AppColors.error)
+                        }
+                        Button {
+                            Task { await viewModel.ensureAgentsLoaded(force: true) }
+                        } label: {
+                            Text("重试获取")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(AppColors.primary)
+                        }
+                    }
                 }
             }
             .padding()

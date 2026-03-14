@@ -134,6 +134,10 @@ extension AgentCommand {
                 return false
             }
         }
+
+        var isVisibleInCommandPanel: Bool {
+            self != .agents
+        }
     }
 
     var commandStatus: Status {

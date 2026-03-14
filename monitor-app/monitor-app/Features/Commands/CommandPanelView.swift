@@ -121,7 +121,7 @@ struct CommandPanelView: View {
         case .start: AppColors.success
         case .stop: AppColors.error
         case .restart, .gateway: AppColors.warning
-        case .status, .doctor, .probe, .logs: AppColors.primary
+        case .status, .doctor, .probe, .logs, .agents: AppColors.primary
         case .config, .update, .sessions, .security: AppColors.cyan
         case .message: AppColors.primary
         }
