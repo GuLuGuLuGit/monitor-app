@@ -440,17 +440,16 @@ struct CommandDetailSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
+                    Button("关闭") { dismiss() }
+                        .foregroundStyle(AppColors.textSecondary)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
                     if command.isDeletable {
                         Button(role: .destructive) {
                             showDeleteAlert = true
                         } label: {
                             Image(systemName: "trash")
                         }
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("关闭") { dismiss() }
-                        .foregroundStyle(AppColors.primary)
                     }
                 }
             }
@@ -470,6 +469,7 @@ struct CommandDetailSheet: View {
         } message: {
             Text("删除后无法恢复，原文输出和错误记录会一并删除。")
         }
+    }
     }
 
     private func detailRow(_ label: String, _ value: String) -> some View {
