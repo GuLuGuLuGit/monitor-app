@@ -25,6 +25,7 @@ final class AuthManager {
         } catch {
             isAuthenticated = false
             await KeychainStore.shared.clearAll()
+            WidgetSnapshotStore.clear()
         }
     }
 
@@ -49,5 +50,6 @@ final class AuthManager {
         await KeychainStore.shared.clearAll()
         currentAdmin = nil
         isAuthenticated = false
+        WidgetSnapshotStore.clear()
     }
 }

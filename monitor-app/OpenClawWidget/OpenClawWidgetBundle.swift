@@ -11,7 +11,9 @@ import SwiftUI
 @main
 struct OpenClawWidgetBundle: WidgetBundle {
     var body: some Widget {
-        OpenClawWidget()
+        LingkongOverviewWidget()
+        LingkongAlertsWidget()
+        LingkongUnreadWidget()
         OpenClawWidgetControl()
         OpenClawWidgetLiveActivity()
     }

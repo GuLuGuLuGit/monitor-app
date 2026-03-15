@@ -20,7 +20,7 @@ struct LoginView: View {
                             .foregroundStyle(AppColors.gradientPrimary)
                             .shadow(color: AppColors.primary.opacity(0.3), radius: 16)
 
-                        Text("OpenClaw")
+                        Text("灵控")
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                             .foregroundStyle(AppColors.textTitle)
 

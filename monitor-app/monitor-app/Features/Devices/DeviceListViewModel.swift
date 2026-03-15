@@ -49,6 +49,7 @@ final class DeviceListViewModel {
                 ]
             )
             devices = result.items
+            WidgetSnapshotStore.save(devices: devices)
         } catch let error as APIError {
             errorMessage = error.errorDescription
         } catch {
@@ -74,6 +75,7 @@ final class DeviceListViewModel {
         do {
             try await APIClient.shared.requestVoid(.deleteDevice(id: device.id))
             devices.removeAll { $0.id == device.id }
+            WidgetSnapshotStore.save(devices: devices)
             return true
         } catch {
             errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription

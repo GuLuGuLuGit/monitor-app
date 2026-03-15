@@ -146,7 +146,7 @@ struct CommandPanelView: View {
 
     private func commandHint(_ type: AgentCommand.CommandType) -> String {
         switch type {
-        case .start: return "启动 OpenClaw 服务"
+        case .start: return "启动服务"
         case .stop: return "停止当前服务"
         case .restart: return "重启服务和关键依赖"
         case .gateway: return "查看或重启 Gateway"

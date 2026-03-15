@@ -4,7 +4,7 @@ import AppIntents
 
 struct CheckDeviceStatusIntent: AppIntent {
     static var title: LocalizedStringResource = "查看设备状态"
-    static var description: IntentDescription = "查看 OpenClaw 设备状态"
+    static var description: IntentDescription = "查看灵控设备状态"
     static var openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
@@ -24,7 +24,7 @@ struct CheckDeviceStatusIntent: AppIntent {
 
 struct SendRestartCommandIntent: AppIntent {
     static var title: LocalizedStringResource = "重启设备"
-    static var description: IntentDescription = "向指定 OpenClaw 设备发送重启命令"
+    static var description: IntentDescription = "向指定设备发送重启命令"
     static var openAppWhenRun = true
 
     @Parameter(title: "设备名称")

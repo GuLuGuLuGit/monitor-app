@@ -68,7 +68,7 @@ struct DeviceCardView: View {
             }
 
             HStack(spacing: 8) {
-                signalPill(title: "OpenClaw", value: openClawInfo?.overview?.version ?? device.agentVersion, detail: openClawInfo?.model ?? "待模型")
+                signalPill(title: "灵控", value: openClawInfo?.overview?.version ?? device.agentVersion, detail: openClawInfo?.model ?? "待模型")
                 signalPill(title: "Agents", value: "\(agentCount)", detail: agentCount > 0 ? "\(onlineAgentCount) 在线" : (openClawInfo?.overview?.agentsSummary ?? "待上报"))
             }
 
