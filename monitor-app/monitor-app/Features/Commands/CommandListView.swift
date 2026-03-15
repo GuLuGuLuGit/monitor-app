@@ -107,6 +107,7 @@ struct CommandListView: View {
                         .padding(.vertical, 16)
                         .padding(.top, topContentSpacing)
                     }
+                    .scrollIndicators(.hidden)
                     .refreshable { await viewModel.loadCommands() }
                 }
             }
@@ -326,9 +327,10 @@ struct CommandDetailSheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("关闭") { dismiss() }
                         .foregroundStyle(AppColors.primary)
+                    }
                 }
+                .scrollIndicators(.hidden)
             }
-        }
         .presentationDetents([.medium, .large])
         .sheet(item: $rawContent) { content in
             RawTextSheet(content: content)

@@ -18,6 +18,7 @@ struct TaskProgressView: View {
                     }
                     .padding()
                 }
+                .scrollIndicators(.hidden)
             }
             .navigationTitle("任务进度")
             .navigationBarTitleDisplayMode(.inline)

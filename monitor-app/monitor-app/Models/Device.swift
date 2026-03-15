@@ -59,16 +59,48 @@ extension Device {
         let model = cpuModel.trimmingCharacters(in: .whitespacesAndNewlines)
         let coreText = cpuCores > 0 ? "\(cpuCores) 核" : nil
         let parts = [model.isEmpty ? nil : model, coreText].compactMap { $0 }
-        return parts.isEmpty ? "--" : parts.joined(separator: " · ")
+        return parts.isEmpty ? "待上报" : parts.joined(separator: " · ")
     }
 
     var formattedMemory: String {
-        guard memoryTotal > 0 else { return "--" }
-        return ByteCountFormatter.string(fromByteCount: memoryTotal, countStyle: .memory)
+        formattedMemory(using: latestMetric)
     }
 
     var formattedDisk: String {
-        guard diskTotal > 0 else { return "--" }
-        return ByteCountFormatter.string(fromByteCount: diskTotal, countStyle: .file)
+        formattedDisk(using: latestMetric)
+    }
+
+    func effectiveMemoryTotal(using metric: SystemMetric? = nil) -> Int64 {
+        if memoryTotal > 0 {
+            return memoryTotal
+        }
+        guard let metric else {
+            return 0
+        }
+        let derived = metric.memoryUsed + metric.memoryAvailable
+        return derived > 0 ? derived : 0
+    }
+
+    func effectiveDiskTotal(using metric: SystemMetric? = nil) -> Int64 {
+        if diskTotal > 0 {
+            return diskTotal
+        }
+        guard let metric else {
+            return 0
+        }
+        let derived = metric.diskUsed + metric.diskAvailable
+        return derived > 0 ? derived : 0
+    }
+
+    func formattedMemory(using metric: SystemMetric? = nil) -> String {
+        let total = effectiveMemoryTotal(using: metric)
+        guard total > 0 else { return "待上报" }
+        return ByteCountFormatter.string(fromByteCount: total, countStyle: .memory)
+    }
+
+    func formattedDisk(using metric: SystemMetric? = nil) -> String {
+        let total = effectiveDiskTotal(using: metric)
+        guard total > 0 else { return "待上报" }
+        return ByteCountFormatter.string(fromByteCount: total, countStyle: .file)
     }
 }

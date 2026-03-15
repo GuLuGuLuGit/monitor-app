@@ -43,6 +43,10 @@ struct DeviceDetailView: View {
         agentList.filter(isAgentOnline).count
     }
 
+    private var latestMetric: SystemMetric? {
+        viewModel.metrics.last ?? currentDevice.latestMetric
+    }
+
     var body: some View {
         ZStack {
             AppColors.gradientBg.ignoresSafeArea()
@@ -57,6 +61,7 @@ struct DeviceDetailView: View {
                     }
                     .padding()
                 }
+                .scrollIndicators(.hidden)
                 .refreshable {
                     await reloadAll()
                 }
@@ -104,6 +109,9 @@ struct DeviceDetailView: View {
             await reloadAll()
             viewModel.startAutoRefresh()
         }
+        .onReceive(NotificationCenter.default.publisher(for: AgentUnreadStore.didChangeNotification)) { _ in
+            Task { await viewModel.loadUnreadAgentCounts() }
+        }
         .onDisappear {
             viewModel.stopAutoRefresh()
         }
@@ -114,6 +122,7 @@ struct DeviceDetailView: View {
         await viewModel.loadMetrics()
         await viewModel.loadSkills()
         await viewModel.loadRecentAgentActivity()
+        await viewModel.loadUnreadAgentCounts()
     }
 
     private func toggleStatus(to newStatus: Int8) async {
@@ -203,7 +212,7 @@ struct DeviceDetailView: View {
                         .navigationTitle(agent.name)
                         .navigationBarTitleDisplayMode(.inline)
                     } label: {
-                        agentDirectoryRow(agent)
+                        agentDirectoryRow(agent, unreadCount: viewModel.unreadCount(for: agent.id))
                     }
                     .buttonStyle(.plain)
                 }
@@ -223,6 +232,12 @@ struct DeviceDetailView: View {
                     Text("最近 24 小时")
                         .font(.caption)
                         .foregroundStyle(AppColors.textSecondary)
+                }
+
+                HStack(spacing: 12) {
+                    legendChip(title: "CPU", color: AppColors.primary)
+                    legendChip(title: "内存", color: AppColors.cyan)
+                    legendChip(title: "磁盘", color: AppColors.warning)
                 }
 
                 Chart {
@@ -335,8 +350,8 @@ struct DeviceDetailView: View {
                 ("系统版本", currentDevice.osVersion),
                 ("Agent 版本", currentDevice.agentVersion),
                 ("CPU", currentDevice.formattedCPU),
-                ("内存", currentDevice.formattedMemory),
-                ("磁盘", currentDevice.formattedDisk),
+                ("内存", currentDevice.formattedMemory(using: latestMetric)),
+                ("磁盘", currentDevice.formattedDisk(using: latestMetric)),
                 ("注册时间", formattedDate(currentDevice.registeredAt)),
             ])
         }
@@ -534,6 +549,22 @@ struct DeviceDetailView: View {
         return (palettes[idx].0, palettes[idx].1)
     }
 
+    private func legendChip(title: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+            Text(title)
+                .font(.caption2)
+                .fontWeight(.semibold)
+                .foregroundStyle(AppColors.textSecondary)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.white.opacity(0.22))
+        .clipShape(Capsule())
+    }
+
     private func emptyHint(_ text: String) -> some View {
         Text(text)
             .font(.caption)
@@ -544,7 +575,7 @@ struct DeviceDetailView: View {
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
     }
 
-    private func agentDirectoryRow(_ agent: OpenClawAgent) -> some View {
+    private func agentDirectoryRow(_ agent: OpenClawAgent, unreadCount: Int) -> some View {
         let online = isAgentOnline(agent)
         return HStack(spacing: 12) {
             Circle()
@@ -572,6 +603,9 @@ struct DeviceDetailView: View {
                 statusChip(text: online ? "在线" : "离线", color: online ? AppColors.success : AppColors.disabled)
                 if let sessions = agent.sessions {
                     statusChip(text: "\(sessions) 会话", color: AppColors.primary)
+                }
+                if unreadCount > 0 {
+                    statusChip(text: "未读 \(unreadCount)", color: AppColors.error)
                 }
                 if let active = agent.active, !active.isEmpty {
                     Text("最近活跃 \(active)")

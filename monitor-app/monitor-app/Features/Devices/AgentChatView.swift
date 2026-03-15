@@ -302,6 +302,7 @@ struct AgentChatView: View {
                 }
                 .padding(16)
             }
+            .scrollIndicators(.hidden)
             .background(Color.white.opacity(0.18))
             .onChange(of: messages.count) { _, _ in
                 withAnimation {
@@ -456,6 +457,7 @@ struct AgentChatView: View {
         guard !name.isEmpty else { return }
         messages = []
         unreadAgentIds.remove(name)
+        AgentUnreadStore.markRead(deviceId: deviceId, agentId: name)
         Task { await loadHistory(agentId: name) }
     }
 
@@ -476,6 +478,7 @@ struct AgentChatView: View {
         customAgentName = ""
         inputText = ""
         unreadAgentIds.remove(agent.id)
+        AgentUnreadStore.markRead(deviceId: deviceId, agentId: agent.id)
         if !isSameAgent || messages.isEmpty {
             Task { await loadHistory(agentId: agent.id) }
         }
@@ -526,6 +529,7 @@ struct AgentChatView: View {
                 }
             }
             messages = msgs
+            AgentUnreadStore.markRead(deviceId: deviceId, agentId: agentId)
             if let latestActivity = msgs.map(\.time).max(), Date().timeIntervalSince(latestActivity) <= 900 {
                 liveOnlineAgentIds.insert(agentId)
             }
@@ -543,6 +547,7 @@ struct AgentChatView: View {
         liveOnlineAgentIds.insert(agentId)
         if isActive {
             unreadAgentIds.remove(agentId)
+            AgentUnreadStore.markRead(deviceId: deviceId, agentId: agentId)
         }
         if event.role == "assistant" {
             let resolvedStatus: Int8 = event.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? event.status : 2
@@ -557,6 +562,7 @@ struct AgentChatView: View {
             if isActive {
                 appendOrReplace(msg)
                 updateUserStatus(commandId: event.commandId, status: resolvedStatus)
+                AgentUnreadStore.markRead(deviceId: deviceId, agentId: agentId)
             } else {
                 unreadAgentIds.insert(agentId)
             }
@@ -576,6 +582,7 @@ struct AgentChatView: View {
                 } else {
                     appendOrReplace(msg)
                 }
+                AgentUnreadStore.markRead(deviceId: deviceId, agentId: agentId)
             } else {
                 unreadAgentIds.insert(agentId)
             }

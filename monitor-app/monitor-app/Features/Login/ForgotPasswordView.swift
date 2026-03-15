@@ -285,6 +285,7 @@ struct ForgotPasswordView: View {
                 }
                 .padding(.horizontal, 24)
             }
+            .scrollIndicators(.hidden)
         }
         .navigationBarBackButtonHidden()
         .toolbar {

@@ -100,6 +100,9 @@ struct DeviceListView: View {
             await viewModel.load()
             viewModel.startAutoRefresh()
         }
+        .onReceive(NotificationCenter.default.publisher(for: AgentUnreadStore.didChangeNotification)) { _ in
+            Task { await viewModel.refreshUnreadMessageCounts() }
+        }
         .onDisappear {
             viewModel.stopAutoRefresh()
         }
@@ -142,6 +145,7 @@ struct DeviceListView: View {
             .padding(.vertical, 16)
             .padding(.top, topContentSpacing)
         }
+        .scrollIndicators(.hidden)
         .refreshable { await viewModel.load() }
     }
 
@@ -175,6 +179,7 @@ struct DeviceListView: View {
                         .padding(.vertical, 16)
                         .padding(.top, topContentSpacing)
                     }
+                    .scrollIndicators(.hidden)
                     .refreshable { await viewModel.load() }
                 }
             }
@@ -381,7 +386,6 @@ struct DeviceListView: View {
     private func deviceEntry(_ device: Device, useButtons: Bool, dimmed: Bool) -> some View {
         if useButtons {
             Button {
-                viewModel.markMessagesRead(for: device.deviceId)
                 selectedDevice = device
             } label: {
                 DeviceCardView(device: device, unreadCount: viewModel.unreadCount(for: device.deviceId))
@@ -393,9 +397,6 @@ struct DeviceListView: View {
                 DeviceCardView(device: device, unreadCount: viewModel.unreadCount(for: device.deviceId))
                     .opacity(dimmed ? 0.82 : 1)
             }
-            .simultaneousGesture(TapGesture().onEnded {
-                viewModel.markMessagesRead(for: device.deviceId)
-            })
             .buttonStyle(.plain)
         }
     }

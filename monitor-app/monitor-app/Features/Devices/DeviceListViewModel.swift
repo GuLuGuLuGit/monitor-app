@@ -13,8 +13,6 @@ final class DeviceListViewModel {
     var statusFilter: Int8? = nil
 
     private var refreshTimer: Timer?
-    private let unreadSeenKey = "device_agent_unread_seen_at"
-
     var filteredDevices: [Device] {
         var result = devices
         if let filter = statusFilter {
@@ -52,7 +50,7 @@ final class DeviceListViewModel {
                 ]
             )
             devices = result.items
-            await loadUnreadMessageCounts()
+            await refreshUnreadMessageCounts()
         } catch let error as APIError {
             errorMessage = error.errorDescription
         } catch {
@@ -102,14 +100,7 @@ final class DeviceListViewModel {
         unreadMessageCounts[deviceId] ?? 0
     }
 
-    func markMessagesRead(for deviceId: String) {
-        var seenMap = unreadSeenMap()
-        seenMap[deviceId] = ISO8601DateFormatter().string(from: Date())
-        UserDefaults.standard.set(seenMap, forKey: unreadSeenKey)
-        unreadMessageCounts[deviceId] = 0
-    }
-
-    private func loadUnreadMessageCounts() async {
+    func refreshUnreadMessageCounts() async {
         do {
             let response: CommandListResponse = try await APIClient.shared.request(
                 .commands,
@@ -120,15 +111,18 @@ final class DeviceListViewModel {
                 ]
             )
 
-            let seenMap = unreadSeenDates()
             var counts: [String: Int] = [:]
 
             for command in response.commands {
                 let replyText = command.result.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !replyText.isEmpty else { continue }
+                guard let agentId = command.commandParams?["agent_id"]?.value as? String,
+                      !agentId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    continue
+                }
 
                 let eventTime = command.executedAt ?? command.updatedAt
-                let seenAt = seenMap[command.deviceId] ?? .distantPast
+                let seenAt = AgentUnreadStore.seenDate(deviceId: command.deviceId, agentId: agentId)
                 guard eventTime > seenAt else { continue }
                 counts[command.deviceId, default: 0] += 1
             }
@@ -137,14 +131,5 @@ final class DeviceListViewModel {
         } catch {
             unreadMessageCounts = [:]
         }
-    }
-
-    private func unreadSeenMap() -> [String: String] {
-        UserDefaults.standard.dictionary(forKey: unreadSeenKey) as? [String: String] ?? [:]
-    }
-
-    private func unreadSeenDates() -> [String: Date] {
-        let formatter = ISO8601DateFormatter()
-        return unreadSeenMap().compactMapValues { formatter.date(from: $0) }
     }
 }

@@ -12,6 +12,7 @@ final class DeviceDetailViewModel {
     private(set) var skills: [SkillItem] = []
     private(set) var skillTotal: Int = 0
     private(set) var recentAgentActivity: [String: Date] = [:]
+    private(set) var unreadCountsByAgent: [String: Int] = [:]
     private(set) var isLoading = false
     private(set) var errorMessage: String?
 
@@ -128,6 +129,45 @@ final class DeviceDetailViewModel {
         }
     }
 
+    func unreadCount(for agentId: String) -> Int {
+        unreadCountsByAgent[agentId] ?? 0
+    }
+
+    func loadUnreadAgentCounts() async {
+        guard let deviceId = device?.deviceId, !deviceId.isEmpty else { return }
+
+        do {
+            let result: CommandListResponse = try await APIClient.shared.request(
+                .commands,
+                queryItems: [
+                    URLQueryItem(name: "device_id", value: deviceId),
+                    URLQueryItem(name: "command_type", value: "openclaw_message"),
+                    URLQueryItem(name: "page", value: "1"),
+                    URLQueryItem(name: "page_size", value: "100"),
+                ]
+            )
+
+            var counts: [String: Int] = [:]
+            for command in result.commands {
+                let replyText = command.result.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !replyText.isEmpty else { continue }
+                guard let agentId = command.commandParams?["agent_id"]?.value as? String,
+                      !agentId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    continue
+                }
+
+                let eventTime = command.executedAt ?? command.updatedAt
+                let seenAt = AgentUnreadStore.seenDate(deviceId: deviceId, agentId: agentId)
+                guard eventTime > seenAt else { continue }
+                counts[agentId, default: 0] += 1
+            }
+
+            unreadCountsByAgent = counts
+        } catch {
+            unreadCountsByAgent = [:]
+        }
+    }
+
     func startAutoRefresh() {
         stopAutoRefresh()
         refreshTimer = Timer.scheduledTimer(withTimeInterval: AppConfig.detailRefreshInterval, repeats: true) { [weak self] _ in
@@ -137,6 +177,7 @@ final class DeviceDetailViewModel {
                 await self.loadMetrics()
                 await self.loadSkills()
                 await self.loadRecentAgentActivity()
+                await self.loadUnreadAgentCounts()
             }
         }
     }

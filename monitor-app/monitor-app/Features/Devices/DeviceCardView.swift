@@ -79,8 +79,8 @@ struct DeviceCardView: View {
             VStack(spacing: 10) {
                 if let metric = effectiveLatestMetric, device.isOnline {
                     usageRow(title: "CPU", usage: metric.cpuUsage, detail: device.formattedCPU)
-                    usageRow(title: "内存", usage: metric.memoryUsage, detail: "\(formattedBytes(metric.memoryUsed)) / \(device.formattedMemory)")
-                    usageRow(title: "磁盘", usage: metric.diskUsage, detail: "\(formattedBytes(metric.diskUsed)) / \(device.formattedDisk)")
+                    usageRow(title: "内存", usage: metric.memoryUsage, detail: "\(formattedBytes(metric.memoryUsed)) / \(device.formattedMemory(using: metric))")
+                    usageRow(title: "磁盘", usage: metric.diskUsage, detail: "\(formattedBytes(metric.diskUsed)) / \(device.formattedDisk(using: metric))")
                 } else {
                     placeholderUsageRow(title: "CPU")
                     placeholderUsageRow(title: "内存")

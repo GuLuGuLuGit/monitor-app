@@ -149,6 +149,7 @@ struct LoginView: View {
                 }
                 .padding(.horizontal, 24)
             }
+            .scrollIndicators(.hidden)
         }
         .animation(.easeInOut(duration: 0.3), value: viewModel.errorMessage != nil)
         .onAppear {
