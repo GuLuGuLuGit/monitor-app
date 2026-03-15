@@ -46,14 +46,14 @@ struct SettingsView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(AuthManager.shared.currentAdmin?.nickname ?? "管理员")
+                    Text(AuthManager.shared.currentAdmin?.nickname ?? "用户")
                         .font(.headline)
                         .foregroundStyle(AppColors.textPrimary)
                     Text(AuthManager.shared.currentAdmin?.email ?? "")
                         .font(.caption)
                         .foregroundStyle(AppColors.textSecondary)
                     if let role = AuthManager.shared.currentAdmin?.role {
-                        Text(role.uppercased())
+                        Text(role.lowercased() == "admin" ? "用户" : role)
                             .font(.caption2)
                             .fontWeight(.semibold)
                             .foregroundStyle(AppColors.primary)

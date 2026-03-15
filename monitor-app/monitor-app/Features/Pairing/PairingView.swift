@@ -51,7 +51,7 @@ struct PairingView: View {
                     .fontWeight(.bold)
                     .foregroundStyle(AppColors.textTitle)
 
-                Text("当前仅支持 macOS。请输入 Agent 终端显示的 6 位配对码")
+                Text("当前仅支持 macOS。请输入 Agent 终端显示的 6 位配对码，将设备添加到我的设备")
                     .font(.subheadline)
                     .foregroundStyle(AppColors.textSecondary)
                     .multilineTextAlignment(.center)
@@ -175,7 +175,7 @@ struct PairingView: View {
                 .foregroundStyle(AppColors.success)
                 .shadow(color: AppColors.success.opacity(0.35), radius: 16)
 
-            Text("配对成功!")
+            Text("配对成功")
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundStyle(AppColors.textTitle)
@@ -185,9 +185,8 @@ struct PairingView: View {
                     .font(.headline)
                     .foregroundStyle(AppColors.textPrimary)
 
-                Text("Node ID: \(String(device.nodeId.prefix(12)))...")
+                Text("已添加到我的设备")
                     .font(.caption)
-                    .monospaced()
                     .foregroundStyle(AppColors.textSecondary)
             }
             .padding()

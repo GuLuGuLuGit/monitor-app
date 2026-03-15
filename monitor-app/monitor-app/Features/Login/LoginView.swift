@@ -24,7 +24,7 @@ struct LoginView: View {
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                             .foregroundStyle(AppColors.textTitle)
 
-                        Text("远程管理平台")
+                        Text("我的设备")
                             .font(.subheadline)
                             .foregroundStyle(AppColors.textSecondary)
                     }
@@ -38,7 +38,7 @@ struct LoginView: View {
                         }
 
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("用户名")
+                            Text("账号")
                                 .font(.caption)
                                 .foregroundStyle(AppColors.textSecondary)
 
@@ -131,7 +131,7 @@ struct LoginView: View {
                         .disabled(!viewModel.isFormValid || viewModel.isLoading)
 
                         HStack {
-                            NavigationLink("注册账号", destination: RegisterView())
+                            NavigationLink("注册", destination: RegisterView())
                                 .font(.subheadline)
                                 .foregroundStyle(AppColors.primary)
 

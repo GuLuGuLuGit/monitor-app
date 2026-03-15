@@ -16,7 +16,7 @@ final class LoginViewModel {
 
     func login() async {
         guard isFormValid else {
-            errorMessage = "请输入有效的用户名和密码"
+            errorMessage = "请输入有效的账号和密码"
             return
         }
 

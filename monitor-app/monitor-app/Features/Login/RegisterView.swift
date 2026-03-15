@@ -119,11 +119,11 @@ struct RegisterView: View {
                             .foregroundStyle(AppColors.gradientPrimary)
                             .shadow(color: AppColors.primary.opacity(0.3), radius: 16)
 
-                        Text("注册账号")
+                        Text("注册")
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundStyle(AppColors.textTitle)
 
-                        Text("创建你的 OpenClaw 账号")
+                        Text("创建你的账号")
                             .font(.subheadline)
                             .foregroundStyle(AppColors.textSecondary)
                     }
@@ -211,7 +211,7 @@ struct RegisterView: View {
                         }
 
                         inputField(
-                            label: "用户名 (3-50 个字符)",
+                            label: "账号 (3-50 个字符)",
                             icon: "person.fill",
                             field: .username
                         ) {
