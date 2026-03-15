@@ -89,6 +89,15 @@ enum APIEndpoint {
         }
     }
 
+    var requiresAuth: Bool {
+        switch self {
+        case .login, .register, .sendCode, .resetPassword:
+            false
+        default:
+            true
+        }
+    }
+
     func urlRequest(baseURL: URL) -> URLRequest {
         let url = baseURL.appendingPathComponent(path)
         var request = URLRequest(url: url)

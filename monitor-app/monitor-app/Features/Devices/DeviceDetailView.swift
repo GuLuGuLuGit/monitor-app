@@ -300,7 +300,7 @@ struct DeviceDetailView: View {
                             .padding(.top, 10)
                     }
 
-                    DisclosureGroup("灵控") {
+                    DisclosureGroup("灵控台") {
                         openClawOverviewCard
                             .padding(.top, 10)
                     }
@@ -374,7 +374,7 @@ struct DeviceDetailView: View {
                     ("Agents", overview.agentsSummary ?? "—"),
                 ])
             } else {
-                emptyHint("无灵控数据")
+                emptyHint("无灵控台数据")
             }
         }
     }

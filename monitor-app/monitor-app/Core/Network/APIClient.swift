@@ -53,7 +53,7 @@ actor APIClient {
             urlRequest = endpoint.urlRequest(baseURL: baseURL, queryItems: queryItems)
         }
 
-        if let token = await KeychainStore.shared.getToken() {
+        if endpoint.requiresAuth, let token = await KeychainStore.shared.getToken() {
             urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
@@ -65,11 +65,12 @@ actor APIClient {
         let (data, response) = try await performRequest(urlRequest)
         let httpResponse = response as! HTTPURLResponse
 
-        if httpResponse.statusCode == 401 {
+        if endpoint.requiresAuth && httpResponse.statusCode == 401 {
             let refreshed = await refreshTokenIfNeeded()
             if refreshed {
                 return try await request(endpoint, bodyData: bodyData, queryItems: queryItems)
             } else {
+                await KeychainStore.shared.clearAll()
                 throw APIError.unauthorized
             }
         }

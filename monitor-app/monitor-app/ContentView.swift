@@ -57,7 +57,7 @@ struct ContentView: View {
                     .foregroundStyle(AppColors.primary)
                     .shadow(color: AppColors.primary.opacity(0.3), radius: 12)
 
-                Text("灵控已锁定")
+                Text("灵控台已锁定")
                     .font(.title3)
                     .fontWeight(.bold)
                     .foregroundStyle(AppColors.textTitle)

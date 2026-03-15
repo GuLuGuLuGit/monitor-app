@@ -4,7 +4,7 @@ import AppIntents
 
 struct CheckDeviceStatusIntent: AppIntent {
     static var title: LocalizedStringResource = "查看设备状态"
-    static var description: IntentDescription = "查看灵控设备状态"
+    static var description: IntentDescription = "查看灵控台设备状态"
     static var openAppWhenRun = false
 
     func perform() async throws -> some IntentResult & ProvidesDialog {

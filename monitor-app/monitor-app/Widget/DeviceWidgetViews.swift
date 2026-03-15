@@ -10,7 +10,7 @@ struct DeviceWidgetSmallView: View {
                 Image(systemName: "antenna.radiowaves.left.and.right")
                     .font(.caption)
                     .foregroundStyle(Color(hex: "3b82f6"))
-                Text("灵控")
+                Text("灵控台")
                     .font(.caption2)
                     .fontWeight(.semibold)
                     .foregroundStyle(Color(hex: "7a8ba8"))
@@ -101,7 +101,7 @@ struct DeviceWidgetLargeView: View {
             HStack {
                 Image(systemName: "antenna.radiowaves.left.and.right")
                     .foregroundStyle(Color(hex: "3b82f6"))
-                Text("灵控")
+                Text("灵控台")
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundStyle(Color(hex: "f1f5f9"))
