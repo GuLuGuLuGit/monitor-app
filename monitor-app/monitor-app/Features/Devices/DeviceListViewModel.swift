@@ -7,7 +7,6 @@ final class DeviceListViewModel {
     private(set) var devices: [Device] = []
     private(set) var isLoading = false
     private(set) var errorMessage: String?
-    private(set) var unreadMessageCounts: [String: Int] = [:]
 
     var searchText = ""
     var statusFilter: Int8? = nil
@@ -50,7 +49,6 @@ final class DeviceListViewModel {
                 ]
             )
             devices = result.items
-            await refreshUnreadMessageCounts()
         } catch let error as APIError {
             errorMessage = error.errorDescription
         } catch {
@@ -97,39 +95,6 @@ final class DeviceListViewModel {
     }
 
     func unreadCount(for deviceId: String) -> Int {
-        unreadMessageCounts[deviceId] ?? 0
-    }
-
-    func refreshUnreadMessageCounts() async {
-        do {
-            let response: CommandListResponse = try await APIClient.shared.request(
-                .commands,
-                queryItems: [
-                    URLQueryItem(name: "command_type", value: "openclaw_message"),
-                    URLQueryItem(name: "page", value: "1"),
-                    URLQueryItem(name: "page_size", value: "100"),
-                ]
-            )
-
-            var counts: [String: Int] = [:]
-
-            for command in response.commands {
-                let replyText = command.result.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !replyText.isEmpty else { continue }
-                guard let agentId = command.commandParams?["agent_id"]?.value as? String,
-                      !agentId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                    continue
-                }
-
-                let eventTime = command.executedAt ?? command.updatedAt
-                let seenAt = AgentUnreadStore.seenDate(deviceId: command.deviceId, agentId: agentId)
-                guard eventTime > seenAt else { continue }
-                counts[command.deviceId, default: 0] += 1
-            }
-
-            unreadMessageCounts = counts
-        } catch {
-            unreadMessageCounts = [:]
-        }
+        devices.first(where: { $0.deviceId == deviceId })?.agentUnreadCount ?? 0
     }
 }

@@ -110,7 +110,7 @@ struct DeviceDetailView: View {
             viewModel.startAutoRefresh()
         }
         .onReceive(NotificationCenter.default.publisher(for: AgentUnreadStore.didChangeNotification)) { _ in
-            Task { await viewModel.loadUnreadAgentCounts() }
+            Task { await viewModel.load() }
         }
         .onDisappear {
             viewModel.stopAutoRefresh()
@@ -122,7 +122,6 @@ struct DeviceDetailView: View {
         await viewModel.loadMetrics()
         await viewModel.loadSkills()
         await viewModel.loadRecentAgentActivity()
-        await viewModel.loadUnreadAgentCounts()
     }
 
     private func toggleStatus(to newStatus: Int8) async {

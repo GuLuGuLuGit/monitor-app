@@ -38,9 +38,10 @@ extension OpenClawInfo {
                 let active = a["active"] as? String
                 let bootstrap = a["bootstrap"] as? String
                 let agentOnline = a["agent_online"] as? Bool
+                let agentUnreadCount = intValue(a["agent_unread_count"])
                 let sessionModel = a["session_model"] as? String
                 let sessionTokens = a["session_tokens"] as? String
-                agents.append(OpenClawAgent(id: id, name: name, sessions: sessions, active: active, bootstrap: bootstrap, sessionModel: sessionModel, sessionTokens: sessionTokens, agentOnline: agentOnline))
+                agents.append(OpenClawAgent(id: id, name: name, sessions: sessions, active: active, bootstrap: bootstrap, sessionModel: sessionModel, sessionTokens: sessionTokens, agentUnreadCount: agentUnreadCount, agentOnline: agentOnline))
             }
         }
 
@@ -145,6 +146,7 @@ extension OpenClawInfo {
             let bootstrap = item["bootstrap"] as? String
             let sessionModel = item["session_model"] as? String
             let sessionTokens = item["session_tokens"] as? String
+            let agentUnreadCount = intValue(item["agent_unread_count"])
             let agentOnline = item["agent_online"] as? Bool
             return OpenClawAgent(
                 id: id,
@@ -154,9 +156,18 @@ extension OpenClawInfo {
                 bootstrap: bootstrap,
                 sessionModel: sessionModel,
                 sessionTokens: sessionTokens,
+                agentUnreadCount: agentUnreadCount,
                 agentOnline: agentOnline
             )
         }
+    }
+
+    private static func intValue(_ raw: Any?) -> Int? {
+        if let value = raw as? Int { return value }
+        if let value = raw as? Double { return Int(value) }
+        if let value = raw as? NSNumber { return value.intValue }
+        if let value = raw as? String, let parsed = Int(value) { return parsed }
+        return nil
     }
 }
 
@@ -192,9 +203,10 @@ struct OpenClawAgent: Codable, Identifiable {
     let bootstrap: String?
     let sessionModel: String?
     let sessionTokens: String?
+    let agentUnreadCount: Int?
     let agentOnline: Bool?
 
-    init(id: String, name: String, sessions: Int? = nil, active: String? = nil, bootstrap: String? = nil, sessionModel: String? = nil, sessionTokens: String? = nil, agentOnline: Bool? = nil) {
+    init(id: String, name: String, sessions: Int? = nil, active: String? = nil, bootstrap: String? = nil, sessionModel: String? = nil, sessionTokens: String? = nil, agentUnreadCount: Int? = nil, agentOnline: Bool? = nil) {
         self.id = id
         self.name = name
         self.sessions = sessions
@@ -202,6 +214,7 @@ struct OpenClawAgent: Codable, Identifiable {
         self.bootstrap = bootstrap
         self.sessionModel = sessionModel
         self.sessionTokens = sessionTokens
+        self.agentUnreadCount = agentUnreadCount
         self.agentOnline = agentOnline
     }
 
@@ -221,6 +234,7 @@ struct OpenClawAgent: Codable, Identifiable {
         bootstrap = try? container.decode(String.self, forKey: .bootstrap)
         sessionModel = try? container.decode(String.self, forKey: .sessionModel)
         sessionTokens = try? container.decode(String.self, forKey: .sessionTokens)
+        agentUnreadCount = try? container.decode(Int.self, forKey: .agentUnreadCount)
         agentOnline = try? container.decode(Bool.self, forKey: .agentOnline)
     }
 
@@ -228,6 +242,7 @@ struct OpenClawAgent: Codable, Identifiable {
         case id, name, sessions, active, bootstrap
         case sessionModel = "session_model"
         case sessionTokens = "session_tokens"
+        case agentUnreadCount = "agent_unread_count"
         case agentOnline = "agent_online"
     }
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct PairingView: View {
     @State private var pairingCode = ""
@@ -7,6 +8,19 @@ struct PairingView: View {
     @State private var pairedDeviceInfo: PairingConfirmResponse?
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isFocused: Bool
+    @State private var copiedInstallKey: String?
+
+    private var baseInstallCommand: String {
+        let base = AppConfig.baseURL.replacingOccurrences(of: "/api/v1", with: "")
+        return "curl -fsSL \(base)/install.sh | bash -s -- --server \(base)"
+    }
+
+    private var installCommands: [(key: String, title: String, command: String)] {
+        [
+            ("macos", "macOS", baseInstallCommand),
+            ("linux", "Linux", baseInstallCommand),
+        ]
+    }
 
     var body: some View {
         NavigationStack {
@@ -50,6 +64,43 @@ struct PairingView: View {
                     .foregroundStyle(AppColors.textSecondary)
                     .multilineTextAlignment(.center)
             }
+
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(installCommands, id: \.key) { item in
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text(item.title)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(AppColors.textTitle)
+                            Spacer()
+                            Button(copiedInstallKey == item.key ? "已复制" : "复制") {
+                                UIPasteboard.general.string = item.command
+                                copiedInstallKey = item.key
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                    if copiedInstallKey == item.key { copiedInstallKey = nil }
+                                }
+                            }
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(AppColors.primary)
+                        }
+
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            Text(item.command)
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(AppColors.textPrimary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(12)
+                        }
+                        .background(.ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                                .stroke(AppColors.borderColor, lineWidth: 1)
+                        )
+                    }
+                }
+            }
+            .padding(.horizontal)
 
             VStack(spacing: 16) {
                 HStack(spacing: 8) {

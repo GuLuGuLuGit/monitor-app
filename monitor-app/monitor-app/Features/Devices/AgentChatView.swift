@@ -33,6 +33,14 @@ struct AgentChatView: View {
     @FocusState private var isInputFocused: Bool
     @FocusState private var isAgentNameFocused: Bool
 
+    private struct MarkAgentReadBody: Encodable {
+        let agentId: String
+
+        enum CodingKeys: String, CodingKey {
+            case agentId = "agent_id"
+        }
+    }
+
     init(
         agents: [OpenClawAgent],
         agentsSummary: String?,
@@ -457,7 +465,7 @@ struct AgentChatView: View {
         guard !name.isEmpty else { return }
         messages = []
         unreadAgentIds.remove(name)
-        AgentUnreadStore.markRead(deviceId: deviceId, agentId: name)
+        Task { await markAgentRead(name) }
         Task { await loadHistory(agentId: name) }
     }
 
@@ -478,7 +486,7 @@ struct AgentChatView: View {
         customAgentName = ""
         inputText = ""
         unreadAgentIds.remove(agent.id)
-        AgentUnreadStore.markRead(deviceId: deviceId, agentId: agent.id)
+        Task { await markAgentRead(agent.id) }
         if !isSameAgent || messages.isEmpty {
             Task { await loadHistory(agentId: agent.id) }
         }
@@ -529,7 +537,7 @@ struct AgentChatView: View {
                 }
             }
             messages = msgs
-            AgentUnreadStore.markRead(deviceId: deviceId, agentId: agentId)
+            await markAgentRead(agentId)
             if let latestActivity = msgs.map(\.time).max(), Date().timeIntervalSince(latestActivity) <= 900 {
                 liveOnlineAgentIds.insert(agentId)
             }
@@ -547,7 +555,7 @@ struct AgentChatView: View {
         liveOnlineAgentIds.insert(agentId)
         if isActive {
             unreadAgentIds.remove(agentId)
-            AgentUnreadStore.markRead(deviceId: deviceId, agentId: agentId)
+            Task { await markAgentRead(agentId) }
         }
         if event.role == "assistant" {
             let resolvedStatus: Int8 = event.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? event.status : 2
@@ -562,7 +570,7 @@ struct AgentChatView: View {
             if isActive {
                 appendOrReplace(msg)
                 updateUserStatus(commandId: event.commandId, status: resolvedStatus)
-                AgentUnreadStore.markRead(deviceId: deviceId, agentId: agentId)
+                Task { await markAgentRead(agentId) }
             } else {
                 unreadAgentIds.insert(agentId)
             }
@@ -582,7 +590,7 @@ struct AgentChatView: View {
                 } else {
                     appendOrReplace(msg)
                 }
-                AgentUnreadStore.markRead(deviceId: deviceId, agentId: agentId)
+                Task { await markAgentRead(agentId) }
             } else {
                 unreadAgentIds.insert(agentId)
             }
@@ -688,6 +696,18 @@ struct AgentChatView: View {
         let response: PublicKeyResponse = try await APIClient.shared.request(.devicePublicKey(id: deviceInternalId))
         publicKeyCache = response.publicKey
         return response.publicKey
+    }
+
+    private func markAgentRead(_ agentId: String) async {
+        let trimmed = agentId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        do {
+            let body = MarkAgentReadBody(agentId: trimmed)
+            try await APIClient.shared.requestVoid(.deviceAgentRead(id: deviceInternalId), body: body)
+            AgentUnreadStore.notifyDidChange()
+        } catch {
+            // Keep UI responsive; backend count will refresh on next successful sync.
+        }
     }
 
     private func syncCommandResult(commandId: Int64) async {

@@ -21,6 +21,7 @@ enum APIEndpoint {
     case devices
     case device(id: UInt)
     case devicePublicKey(id: UInt)
+    case deviceAgentRead(id: UInt)
     case deviceStatus(id: UInt)
     case deleteDevice(id: UInt)
 
@@ -59,6 +60,7 @@ enum APIEndpoint {
         case .devices:                  "/admin/devices"
         case .device(let id):           "/admin/devices/\(id)"
         case .devicePublicKey(let id):  "/admin/devices/\(id)/public-key"
+        case .deviceAgentRead(let id):  "/admin/devices/\(id)/agents/read"
         case .deviceStatus(let id):     "/admin/devices/\(id)/status"
         case .deleteDevice(let id):     "/admin/devices/\(id)"
         case .metrics:                  "/admin/metrics"
@@ -76,7 +78,7 @@ enum APIEndpoint {
 
     var method: HTTPMethod {
         switch self {
-        case .login, .register, .sendCode, .resetPassword, .refreshToken, .wsTicket, .createCommand, .pairingConfirm, .registerPushToken:
+        case .login, .register, .sendCode, .resetPassword, .refreshToken, .wsTicket, .createCommand, .pairingConfirm, .registerPushToken, .deviceAgentRead:
             .POST
         case .deviceStatus:
             .PUT

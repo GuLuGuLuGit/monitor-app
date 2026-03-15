@@ -101,7 +101,7 @@ struct DeviceListView: View {
             viewModel.startAutoRefresh()
         }
         .onReceive(NotificationCenter.default.publisher(for: AgentUnreadStore.didChangeNotification)) { _ in
-            Task { await viewModel.refreshUnreadMessageCounts() }
+            Task { await viewModel.load() }
         }
         .onDisappear {
             viewModel.stopAutoRefresh()
