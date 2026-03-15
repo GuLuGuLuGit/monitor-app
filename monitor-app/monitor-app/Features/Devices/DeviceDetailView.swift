@@ -600,9 +600,6 @@ struct DeviceDetailView: View {
 
             VStack(alignment: .trailing, spacing: 4) {
                 statusChip(text: online ? "在线" : "离线", color: online ? AppColors.success : AppColors.disabled)
-                if let sessions = agent.sessions {
-                    statusChip(text: "\(sessions) 会话", color: AppColors.primary)
-                }
                 if unreadCount > 0 {
                     statusChip(text: "未读 \(unreadCount)", color: AppColors.error)
                 }

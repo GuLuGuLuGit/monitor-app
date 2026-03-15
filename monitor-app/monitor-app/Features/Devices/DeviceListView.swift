@@ -116,7 +116,6 @@ struct DeviceListView: View {
             }
             .navigationTitle("设备")
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $viewModel.searchText, prompt: "搜索设备...")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { pairingButton }
                 ToolbarItem(placement: .topBarTrailing) { filterMenu }
@@ -137,6 +136,7 @@ struct DeviceListView: View {
     private var sidebarWorkspace: some View {
         ScrollView {
             VStack(spacing: 16) {
+                searchField
                 listHeroCard
                 filterStrip
                 deviceSectionContent(useButtons: true)
@@ -161,6 +161,7 @@ struct DeviceListView: View {
                 } else {
                     ScrollView {
                         VStack(spacing: 16) {
+                            searchField
                             listHeroCard
                             filterStrip
                             if scopedDevices.isEmpty {
@@ -185,7 +186,6 @@ struct DeviceListView: View {
             }
             .navigationTitle("设备")
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $viewModel.searchText, prompt: "搜索设备...")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { pairingButton }
                 ToolbarItem(placement: .topBarTrailing) { filterMenu }
@@ -233,6 +233,33 @@ struct DeviceListView: View {
         }
         .padding(20)
         .cardStyle()
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(AppColors.textSecondary)
+            TextField("搜索设备...", text: $viewModel.searchText)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            if !viewModel.searchText.isEmpty {
+                Button {
+                    viewModel.searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(AppColors.textSecondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 14)
+        .frame(minHeight: AppTheme.topModuleMinHeight)
+        .background(Color.white.opacity(0.88))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                .stroke(AppColors.borderColor, lineWidth: 1)
+        )
     }
 
     private func summaryTile(title: String, value: String, detail: String, accent: Color) -> some View {

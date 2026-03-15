@@ -8,11 +8,6 @@ struct PairingView: View {
     @State private var pairedDeviceInfo: PairingConfirmResponse?
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isFocused: Bool
-    private var baseInstallCommand: String {
-        let base = AppConfig.baseURL.replacingOccurrences(of: "/api/v1", with: "")
-        return "curl -fsSL \(base)/install.sh | bash -s -- --server \(base)"
-    }
-    @State private var copiedInstallCommand = false
 
     var body: some View {
         NavigationStack {
@@ -57,40 +52,7 @@ struct PairingView: View {
                     .multilineTextAlignment(.center)
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Text("macOS")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(AppColors.textTitle)
-                        Spacer()
-                        Button(copiedInstallCommand ? "已复制" : "复制") {
-                            UIPasteboard.general.string = baseInstallCommand
-                            copiedInstallCommand = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                                copiedInstallCommand = false
-                            }
-                        }
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(AppColors.primary)
-                    }
 
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        Text(baseInstallCommand)
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundStyle(AppColors.textPrimary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(12)
-                    }
-                    .background(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
-                            .stroke(AppColors.borderColor, lineWidth: 1)
-                    )
-                }
-            }
-            .padding(.horizontal)
 
             VStack(spacing: 16) {
                 HStack(spacing: 8) {

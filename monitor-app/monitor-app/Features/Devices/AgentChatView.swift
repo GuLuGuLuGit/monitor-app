@@ -161,9 +161,6 @@ struct AgentChatView: View {
                             }
                             HStack(spacing: 6) {
                                 statusCapsule(text: online ? "在线" : "离线", color: online ? AppColors.success : AppColors.disabled)
-                                if let sessions = agent.sessions {
-                                    statusCapsule(text: "\(sessions) 会话", color: AppColors.primary)
-                                }
                                 if unreadAgentIds.contains(agent.id) {
                                     statusCapsule(text: "未读", color: AppColors.error)
                                 }

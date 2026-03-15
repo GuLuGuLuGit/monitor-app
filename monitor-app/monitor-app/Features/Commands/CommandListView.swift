@@ -66,9 +66,16 @@ struct CommandListView: View {
     @State private var selectedCommand: AgentCommand?
     @State private var statusFilter: StatusFilter = .all
     @State private var groupFilter: GroupFilter = .all
+    @State private var showCleanupDialog = false
+    @State private var pendingDeleteCommand: AgentCommand?
+    @State private var infoMessage: String?
 
     private var filteredCommands: [AgentCommand] {
         viewModel.commands.filter { statusFilter.matches($0) && groupFilter.matches($0) }
+    }
+
+    private var deletableFilteredCommands: [AgentCommand] {
+        filteredCommands.filter(\.isDeletable)
     }
 
     var body: some View {
@@ -99,6 +106,15 @@ struct CommandListView: View {
                                             CommandRowView(command: command)
                                         }
                                         .buttonStyle(.plain)
+                                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                            if command.isDeletable {
+                                                Button(role: .destructive) {
+                                                    pendingDeleteCommand = command
+                                                } label: {
+                                                    Label("删除", systemImage: "trash")
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -113,8 +129,68 @@ struct CommandListView: View {
             }
             .navigationTitle("命令")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button("删除当前筛选结果", role: .destructive) {
+                            if deletableFilteredCommands.isEmpty {
+                                infoMessage = "当前筛选没有可删除记录"
+                            } else {
+                                showCleanupDialog = true
+                            }
+                        }
+                        Button("删除全部失败记录", role: .destructive) {
+                            Task { await runCleanup(statuses: [.failed, .timeout]) }
+                        }
+                        Button("删除全部成功记录", role: .destructive) {
+                            Task { await runCleanup(statuses: [.success]) }
+                        }
+                    } label: {
+                        Image(systemName: "trash")
+                            .foregroundStyle(AppColors.error)
+                    }
+                }
+            }
             .sheet(item: $selectedCommand) { command in
-                CommandDetailSheet(command: command)
+                CommandDetailSheet(command: command) {
+                    let deleted = await viewModel.deleteCommand(command.id)
+                    if deleted {
+                        selectedCommand = nil
+                        infoMessage = "已删除"
+                    } else {
+                        infoMessage = viewModel.errorMessage ?? "删除失败"
+                    }
+                }
+            }
+            .confirmationDialog("清理记录", isPresented: $showCleanupDialog, titleVisibility: .visible) {
+                Button("删除当前筛选结果", role: .destructive) {
+                    Task { await runCleanupCurrentFilter() }
+                }
+                Button("取消", role: .cancel) {}
+            } message: {
+                Text("仅删除已完成记录，处理中命令会保留。")
+            }
+            .alert("删除命令记录", isPresented: Binding(
+                get: { pendingDeleteCommand != nil },
+                set: { if !$0 { pendingDeleteCommand = nil } }
+            ), presenting: pendingDeleteCommand) { command in
+                Button("删除", role: .destructive) {
+                    Task {
+                        let deleted = await viewModel.deleteCommand(command.id)
+                        infoMessage = deleted ? "已删除" : (viewModel.errorMessage ?? "删除失败")
+                    }
+                }
+                Button("取消", role: .cancel) {}
+            } message: { _ in
+                Text("删除后无法恢复，原文输出和错误记录会一并删除。")
+            }
+            .alert("提示", isPresented: Binding(
+                get: { infoMessage != nil },
+                set: { if !$0 { infoMessage = nil } }
+            )) {
+                Button("确定", role: .cancel) { infoMessage = nil }
+            } message: {
+                Text(infoMessage ?? "")
             }
         }
         .task {
@@ -146,7 +222,14 @@ struct CommandListView: View {
                 }
             }
         }
+        .padding(.horizontal, 14)
         .frame(minHeight: AppTheme.topModuleMinHeight)
+        .background(Color.white.opacity(0.88))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                .stroke(AppColors.borderColor, lineWidth: 1)
+        )
     }
 
     private func compactFilterMenu<Content: View>(
@@ -174,15 +257,47 @@ struct CommandListView: View {
                     .foregroundStyle(AppColors.textSecondary)
             }
             .padding(.horizontal, 12)
-            .frame(maxWidth: .infinity, minHeight: AppTheme.topModuleMinHeight)
-            .background(Color.white.opacity(0.72))
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
-            .overlay(
-                RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
-                    .stroke(AppColors.borderColor, lineWidth: 1)
-            )
+            .frame(maxWidth: .infinity, minHeight: AppTheme.topModuleMinHeight - 8)
         }
         .buttonStyle(.plain)
+    }
+
+    @MainActor
+    private func runCleanupCurrentFilter() async {
+        guard !deletableFilteredCommands.isEmpty else {
+            infoMessage = "当前筛选没有可删除记录"
+            return
+        }
+
+        let statuses: [Int8]? = switch statusFilter {
+        case .failed: [AgentCommand.Status.failed.rawValue, AgentCommand.Status.timeout.rawValue]
+        case .success: [AgentCommand.Status.success.rawValue]
+        default: nil
+        }
+
+        let commandTypes: [String]? = switch groupFilter {
+        case .all: nil
+        case .control: AgentCommand.CommandGroup.control.types.map(\.rawValue)
+        case .diagnose: AgentCommand.CommandGroup.diagnose.types.map(\.rawValue)
+        case .manage: AgentCommand.CommandGroup.manage.types.map(\.rawValue)
+        }
+
+        let deleted = await viewModel.cleanupCommands(commandTypes: commandTypes, statuses: statuses)
+        if let deleted {
+            infoMessage = deleted > 0 ? "已删除 \(deleted) 条" : "无可删除记录"
+        } else {
+            infoMessage = viewModel.errorMessage ?? "清理失败"
+        }
+    }
+
+    @MainActor
+    private func runCleanup(statuses: [AgentCommand.Status]) async {
+        let deleted = await viewModel.cleanupCommands(statuses: statuses.map(\.rawValue))
+        if let deleted {
+            infoMessage = deleted > 0 ? "已删除 \(deleted) 条" : "无可删除记录"
+        } else {
+            infoMessage = viewModel.errorMessage ?? "清理失败"
+        }
     }
 }
 
@@ -270,8 +385,10 @@ struct CommandDetailSheet: View {
     }
 
     let command: AgentCommand
+    let onDelete: () async -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var rawContent: RawContent?
+    @State private var showDeleteAlert = false
 
     var body: some View {
         NavigationStack {
@@ -298,8 +415,6 @@ struct CommandDetailSheet: View {
                         .padding()
                         .cardStyle()
 
-                        summarySection
-
                         if !command.result.isEmpty {
                             rawPreviewCard(
                                 title: "原文输出",
@@ -324,16 +439,36 @@ struct CommandDetailSheet: View {
             .navigationTitle("命令详情")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    if command.isDeletable {
+                        Button(role: .destructive) {
+                            showDeleteAlert = true
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("关闭") { dismiss() }
                         .foregroundStyle(AppColors.primary)
                     }
                 }
-                .scrollIndicators(.hidden)
             }
+            .scrollIndicators(.hidden)
         .presentationDetents([.medium, .large])
         .sheet(item: $rawContent) { content in
             RawTextSheet(content: content)
+        }
+        .alert("删除命令记录", isPresented: $showDeleteAlert) {
+            Button("删除", role: .destructive) {
+                Task {
+                    await onDelete()
+                    dismiss()
+                }
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("删除后无法恢复，原文输出和错误记录会一并删除。")
         }
     }
 
@@ -350,32 +485,6 @@ struct CommandDetailSheet: View {
         }
     }
 
-    private var summarySection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(summaryTitle)
-                .font(.headline)
-                .foregroundStyle(command.errorMessage.isEmpty ? AppColors.textTitle : AppColors.error)
-
-            Text(summaryText)
-                .font(.subheadline)
-                .foregroundStyle(command.errorMessage.isEmpty ? AppColors.textPrimary : AppColors.error.opacity(0.85))
-                .textSelection(.enabled)
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    Group {
-                        if command.errorMessage.isEmpty {
-                            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
-                                .fill(.ultraThinMaterial)
-                        } else {
-                            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
-                                .fill(AppColors.error.opacity(0.08))
-                        }
-                    }
-                )
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
-        }
-    }
 
     private func rawPreviewCard(
         title: String,
@@ -432,36 +541,6 @@ struct CommandDetailSheet: View {
         .cardStyle()
     }
 
-    private var summaryTitle: String {
-        if !command.errorMessage.isEmpty { return "执行摘要" }
-        if !command.result.isEmpty { return "结果摘要" }
-        return "当前状态"
-    }
-
-    private var summaryText: String {
-        if !command.errorMessage.isEmpty {
-            return summarize(command.errorMessage)
-        }
-        if !command.result.isEmpty {
-            return summarize(command.result)
-        }
-        return command.commandStatus == .running ? "命令仍在处理中" : command.commandStatus.label
-    }
-
-    private func summarize(_ text: String) -> String {
-        let lines = text
-            .components(separatedBy: .newlines)
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-
-        if lines.isEmpty {
-            return text.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-
-        let preview = lines.prefix(3).joined(separator: "\n")
-        return preview.count > 240 ? String(preview.prefix(240)) + "..." : preview
-    }
-
     private func rawPreview(_ text: String) -> String {
         let normalized = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if normalized.count <= 600 {
@@ -473,6 +552,12 @@ struct CommandDetailSheet: View {
     private func rawMeta(_ text: String) -> String {
         let lineCount = max(text.components(separatedBy: .newlines).count, 1)
         return "\(lineCount) 行 · \(text.count) 字符"
+    }
+}
+
+private extension AgentCommand {
+    var isDeletable: Bool {
+        commandStatus == .success || commandStatus == .failed || commandStatus == .timeout
     }
 }
 

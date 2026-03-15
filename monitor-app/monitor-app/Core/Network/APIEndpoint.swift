@@ -32,6 +32,8 @@ enum APIEndpoint {
     case commands
     case command(id: Int64)
     case createCommand
+    case deleteCommand(id: Int64)
+    case cleanupCommands
 
     // Tasks
     case taskStats
@@ -67,6 +69,8 @@ enum APIEndpoint {
         case .commands:                 "/admin/commands"
         case .command(let id):          "/admin/commands/\(id)"
         case .createCommand:            "/admin/commands"
+        case .deleteCommand(let id):    "/admin/commands/\(id)"
+        case .cleanupCommands:          "/admin/commands/cleanup"
         case .taskStats:                "/admin/tasks/stats"
         case .taskProgress(let id):     "/admin/tasks/\(id)/progress"
         case .taskProgressLatest(let id): "/admin/tasks/\(id)/progress/latest"
@@ -78,11 +82,11 @@ enum APIEndpoint {
 
     var method: HTTPMethod {
         switch self {
-        case .login, .register, .sendCode, .resetPassword, .refreshToken, .wsTicket, .createCommand, .pairingConfirm, .registerPushToken, .deviceAgentRead:
+        case .login, .register, .sendCode, .resetPassword, .refreshToken, .wsTicket, .createCommand, .cleanupCommands, .pairingConfirm, .registerPushToken, .deviceAgentRead:
             .POST
         case .deviceStatus:
             .PUT
-        case .deleteDevice:
+        case .deleteDevice, .deleteCommand:
             .DELETE
         default:
             .GET

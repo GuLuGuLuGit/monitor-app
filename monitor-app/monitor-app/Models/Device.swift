@@ -59,7 +59,7 @@ extension Device {
 
     var formattedCPU: String {
         let model = cpuModel.trimmingCharacters(in: .whitespacesAndNewlines)
-        let coreText = cpuCores > 0 ? "\(cpuCores) 核" : nil
+        let coreText = cpuCores > 1 ? "\(cpuCores) 核" : nil
         let parts = [model.isEmpty ? nil : model, coreText].compactMap { $0 }
         return parts.isEmpty ? "待上报" : parts.joined(separator: " · ")
     }

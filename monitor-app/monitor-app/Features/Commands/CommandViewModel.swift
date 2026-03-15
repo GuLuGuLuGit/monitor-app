@@ -73,6 +73,45 @@ final class CommandViewModel {
         return false
     }
 
+    func deleteCommand(_ id: Int64, deviceId: String? = nil) async -> Bool {
+        errorMessage = nil
+        do {
+            let _: CommandCleanupResponse = try await APIClient.shared.request(.deleteCommand(id: id))
+            await loadCommands(deviceId: deviceId ?? filterDeviceId)
+            return true
+        } catch let error as APIError {
+            errorMessage = error.errorDescription
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        return false
+    }
+
+    func cleanupCommands(
+        deviceId: String? = nil,
+        commandTypes: [String]? = nil,
+        statuses: [Int8]? = nil
+    ) async -> Int64? {
+        errorMessage = nil
+        do {
+            let result: CommandCleanupResponse = try await APIClient.shared.request(
+                .cleanupCommands,
+                body: CommandCleanupRequest(
+                    deviceId: deviceId ?? filterDeviceId,
+                    commandTypes: commandTypes,
+                    statuses: statuses
+                )
+            )
+            await loadCommands(deviceId: deviceId ?? filterDeviceId)
+            return result.deleted
+        } catch let error as APIError {
+            errorMessage = error.errorDescription
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        return nil
+    }
+
     private func fetchPublicKey(deviceInternalId: UInt) async throws -> String {
         let cacheKey = "\(deviceInternalId)"
         if let cached = publicKeyCache[cacheKey] {
@@ -129,4 +168,20 @@ struct CreateEncryptedCommandRequest: Encodable {
 struct CommandListResponse: Decodable {
     let commands: [AgentCommand]
     let total: Int64
+}
+
+struct CommandCleanupRequest: Encodable {
+    let deviceId: String?
+    let commandTypes: [String]?
+    let statuses: [Int8]?
+
+    enum CodingKeys: String, CodingKey {
+        case deviceId = "device_id"
+        case commandTypes = "command_types"
+        case statuses
+    }
+}
+
+struct CommandCleanupResponse: Decodable {
+    let deleted: Int64
 }
