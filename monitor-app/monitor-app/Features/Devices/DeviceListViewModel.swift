@@ -8,6 +8,7 @@ final class DeviceListViewModel {
     private(set) var isLoading = false
     private(set) var errorMessage: String?
     private(set) var isShowingStaleData = false
+    private(set) var hasLoadedOnce = false
 
     var searchText = ""
     var statusFilter: Int8? = nil
@@ -38,7 +39,9 @@ final class DeviceListViewModel {
     }
 
     func load() async {
-        isLoading = devices.isEmpty
+        if !hasLoadedOnce {
+            isLoading = true
+        }
         errorMessage = nil
 
         do {
@@ -51,6 +54,7 @@ final class DeviceListViewModel {
             )
             devices = result.items
             isShowingStaleData = false
+            hasLoadedOnce = true
             WidgetSnapshotStore.save(devices: devices)
         } catch let error as APIError {
             errorMessage = error.errorDescription
@@ -60,6 +64,7 @@ final class DeviceListViewModel {
             isShowingStaleData = !devices.isEmpty
         }
 
+        hasLoadedOnce = true
         isLoading = false
     }
 
