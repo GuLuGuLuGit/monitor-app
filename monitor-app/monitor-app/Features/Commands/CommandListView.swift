@@ -508,22 +508,6 @@ struct CommandDetailSheet: View {
                 .foregroundStyle(isError ? AppColors.error.opacity(0.85) : AppColors.textPrimary)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(12)
-                .background(
-                    Group {
-                        if isError {
-                            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
-                                .fill(AppColors.error.opacity(0.08))
-                        } else {
-                            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
-                                .fill(.ultraThinMaterial)
-                        }
-                    }
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
-                        .stroke(isError ? AppColors.error.opacity(0.18) : AppColors.borderColor, lineWidth: 1)
-                )
 
             HStack {
                 Text(rawMeta(text))

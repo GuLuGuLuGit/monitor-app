@@ -47,6 +47,22 @@ struct DeviceDetailView: View {
         viewModel.metrics.last ?? currentDevice.latestMetric
     }
 
+    private var deviceStatusSummary: (label: String, color: Color, detail: String?) {
+        if currentDevice.status == 0 {
+            return ("异常", AppColors.error, "设备离线")
+        }
+        if currentDevice.status == -1 {
+            return ("异常", AppColors.error, "设备已禁用")
+        }
+        if agentList.isEmpty {
+            return ("关注", AppColors.warning, "无 Agents")
+        }
+        if onlineAgentCount == 0 {
+            return ("关注", AppColors.warning, "无在线 Agent")
+        }
+        return ("正常", AppColors.success, nil)
+    }
+
     var body: some View {
         ZStack {
             AppColors.gradientBg.ignoresSafeArea()
@@ -61,6 +77,7 @@ struct DeviceDetailView: View {
                                 viewModel.clearError()
                             }
                         }
+                        deviceStatusBanner
                         tabBar
                         workspaceContent
                     }
@@ -159,6 +176,32 @@ struct DeviceDetailView: View {
                 .buttonStyle(.plain)
             }
         }
+    }
+
+    private var deviceStatusBanner: some View {
+        let summary = deviceStatusSummary
+        return HStack(spacing: 10) {
+            statusChip(text: summary.label, color: summary.color)
+            if let detail = summary.detail {
+                Text(detail)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(summary.color)
+            } else {
+                Text("设备运行正常")
+                    .font(.caption)
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(Color.white.opacity(0.28))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
+                .stroke(AppColors.borderColor, lineWidth: 1)
+        )
     }
 
     @ViewBuilder

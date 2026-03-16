@@ -27,6 +27,14 @@ struct DeviceCardView: View {
         return ("正常", AppColors.success)
     }
 
+    private var priorityHint: String? {
+        if device.status == 0 { return "设备离线" }
+        if device.status == -1 { return "设备已禁用" }
+        if agentCount == 0 { return "无 Agents" }
+        if onlineAgentCount == 0 { return "无在线 Agent" }
+        return nil
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
@@ -74,6 +82,13 @@ struct DeviceCardView: View {
 
             HStack(spacing: 8) {
                 statusChip("心跳 \(device.lastHeartbeatAt?.relativeString ?? "暂无")", color: device.isOnline ? AppColors.success : AppColors.disabled)
+            }
+
+            if let priorityHint {
+                Text(priorityHint)
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(priority.color)
             }
 
             VStack(spacing: 10) {

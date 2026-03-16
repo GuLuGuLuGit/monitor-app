@@ -232,29 +232,11 @@ struct AgentChatView: View {
 
     private var chatWorkspace: some View {
         VStack(spacing: 0) {
-            chatHeader
-            Divider().background(AppColors.borderColor)
             chatScrollArea
             Divider().background(AppColors.borderColor)
             inputBar
         }
         .frame(maxWidth: .infinity, minHeight: 420, alignment: .top)
-    }
-
-    private var chatHeader: some View {
-        HStack(spacing: 10) {
-            Text(activeAgent?.name ?? "Agent")
-                .font(.headline)
-                .foregroundStyle(AppColors.textTitle)
-            Spacer()
-            if isLoadingHistory {
-                ProgressView()
-                    .tint(AppColors.primary)
-                    .scaleEffect(0.8)
-            }
-        }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 10)
     }
 
     private var chatScrollArea: some View {
