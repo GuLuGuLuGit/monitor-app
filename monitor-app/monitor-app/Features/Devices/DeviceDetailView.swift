@@ -3,15 +3,15 @@ import Charts
 
 struct DeviceDetailView: View {
     enum WorkspaceTab: String, CaseIterable {
-        case status = "状态"
-        case commands = "命令"
         case agents = "Agent"
+        case commands = "命令"
+        case status = "状态"
 
         var icon: String {
             switch self {
-            case .status: return "waveform.path.ecg"
-            case .commands: return "terminal"
             case .agents: return "bubble.left.and.bubble.right"
+            case .commands: return "terminal"
+            case .status: return "waveform.path.ecg"
             }
         }
     }
@@ -19,12 +19,12 @@ struct DeviceDetailView: View {
     let device: Device
     @State private var viewModel: DeviceDetailViewModel
     @State private var showDeleteConfirm = false
-    @State private var selectedTab: WorkspaceTab = .status
+    @State private var selectedTab: WorkspaceTab = .agents
     @Environment(\.dismiss) private var dismiss
 
     init(device: Device) {
         self.device = device
-        self._viewModel = State(initialValue: DeviceDetailViewModel(deviceId: device.id))
+        self._viewModel = State(initialValue: DeviceDetailViewModel(device: device))
     }
 
     private var currentDevice: Device {
@@ -56,6 +56,11 @@ struct DeviceDetailView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 18) {
+                        if viewModel.isShowingStaleData, let error = viewModel.errorMessage {
+                            ErrorBanner(message: "详情加载失败，当前显示的是上次同步结果。\(error)") {
+                                viewModel.clearError()
+                            }
+                        }
                         tabBar
                         workspaceContent
                     }
@@ -300,7 +305,7 @@ struct DeviceDetailView: View {
                             .padding(.top, 10)
                     }
 
-                    DisclosureGroup("灵控台") {
+                    DisclosureGroup("运行信息") {
                         openClawOverviewCard
                             .padding(.top, 10)
                     }
@@ -374,7 +379,7 @@ struct DeviceDetailView: View {
                     ("Agents", overview.agentsSummary ?? "—"),
                 ])
             } else {
-                emptyHint("无灵控台数据")
+                emptyHint("无运行信息")
             }
         }
     }
@@ -433,6 +438,7 @@ struct DeviceDetailView: View {
             Spacer()
             stateChip(for: value)
         }
+        .frame(maxWidth: .infinity, minHeight: 84, alignment: .topLeading)
         .padding(14)
         .background(Color.white.opacity(0.28))
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
@@ -617,6 +623,10 @@ struct DeviceDetailView: View {
         .padding(14)
         .background(Color.white.opacity(0.28))
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
+                .stroke(AppColors.borderColor, lineWidth: 1)
+        )
         .contentShape(Rectangle())
     }
 

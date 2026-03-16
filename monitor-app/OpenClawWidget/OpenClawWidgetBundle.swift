@@ -14,7 +14,5 @@ struct OpenClawWidgetBundle: WidgetBundle {
         LingkongOverviewWidget()
         LingkongAlertsWidget()
         LingkongUnreadWidget()
-        OpenClawWidgetControl()
-        OpenClawWidgetLiveActivity()
     }
 }

@@ -71,6 +71,7 @@ actor APIClient {
                 return try await request(endpoint, bodyData: bodyData, queryItems: queryItems)
             } else {
                 await KeychainStore.shared.clearAll()
+                await AuthManager.shared.handleUnauthorized()
                 throw APIError.unauthorized
             }
         }

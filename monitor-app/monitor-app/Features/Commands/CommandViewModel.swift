@@ -11,9 +11,6 @@ final class CommandViewModel {
 
     var filterDeviceId: String? = nil
 
-    /// In-memory public key cache: deviceId -> PEM string
-    private var publicKeyCache: [String: String] = [:]
-
     func loadCommands(deviceId: String? = nil) async {
         isLoading = commands.isEmpty
         errorMessage = nil
@@ -113,13 +110,7 @@ final class CommandViewModel {
     }
 
     private func fetchPublicKey(deviceInternalId: UInt) async throws -> String {
-        let cacheKey = "\(deviceInternalId)"
-        if let cached = publicKeyCache[cacheKey] {
-            return cached
-        }
-
         let response: PublicKeyResponse = try await APIClient.shared.request(.devicePublicKey(id: deviceInternalId))
-        publicKeyCache[cacheKey] = response.publicKey
         return response.publicKey
     }
 }

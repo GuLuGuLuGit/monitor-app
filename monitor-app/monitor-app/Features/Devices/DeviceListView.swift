@@ -161,6 +161,11 @@ struct DeviceListView: View {
                 } else {
                     ScrollView {
                         VStack(spacing: 16) {
+                            if viewModel.isShowingStaleData, let error = viewModel.errorMessage {
+                                ErrorBanner(message: "设备数据加载失败，当前显示的是上次同步结果。\(error)") {
+                                    viewModel.clearError()
+                                }
+                            }
                             searchField
                             listHeroCard
                             filterStrip

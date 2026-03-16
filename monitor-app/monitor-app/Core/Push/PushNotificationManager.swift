@@ -1,15 +1,14 @@
 import Foundation
 import UserNotifications
 import UIKit
-import Observation
+import Combine
 
-@Observable
 @MainActor
-final class PushNotificationManager: NSObject, @preconcurrency Sendable {
+final class PushNotificationManager: NSObject, ObservableObject, @preconcurrency Sendable {
     static let shared = PushNotificationManager()
 
-    private(set) var isAuthorized = false
-    private(set) var deviceToken: String?
+    @Published private(set) var isAuthorized = false
+    @Published private(set) var deviceToken: String?
 
     private override init() {
         super.init()

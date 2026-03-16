@@ -312,7 +312,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -370,7 +370,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -392,7 +392,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "monitor-app/Info.plist";
-				INFOPLIST_KEY_NSFaceIDUsageDescription = "OpenClaw 使用 Face ID 保护您的管理数据安全";
+				INFOPLIST_KEY_CFBundleDisplayName = "灵控台";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "灵控台使用 Face ID 保护您的管理数据安全";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -427,7 +428,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "monitor-app/Info.plist";
-				INFOPLIST_KEY_NSFaceIDUsageDescription = "OpenClaw 使用 Face ID 保护您的管理数据安全";
+				INFOPLIST_KEY_CFBundleDisplayName = "灵控台";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "灵控台使用 Face ID 保护您的管理数据安全";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -461,7 +463,7 @@
 				DEVELOPMENT_TEAM = 3R5N3T96FQ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = OpenClawWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = OpenClawWidget;
+				INFOPLIST_KEY_CFBundleDisplayName = "灵控台组件";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -492,7 +494,7 @@
 				DEVELOPMENT_TEAM = 3R5N3T96FQ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = OpenClawWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = OpenClawWidget;
+				INFOPLIST_KEY_CFBundleDisplayName = "灵控台组件";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

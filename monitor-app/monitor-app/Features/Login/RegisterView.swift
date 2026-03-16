@@ -84,13 +84,14 @@ final class RegisterViewModel {
         countdown = 60
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] t in
-            Task { @MainActor in
-                guard let self else { t.invalidate(); return }
-                self.countdown -= 1
-                if self.countdown <= 0 {
-                    self.countdown = 0
-                    t.invalidate()
-                }
+            guard let self else {
+                t.invalidate()
+                return
+            }
+            self.countdown -= 1
+            if self.countdown <= 0 {
+                self.countdown = 0
+                t.invalidate()
             }
         }
     }

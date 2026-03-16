@@ -7,6 +7,7 @@ final class DeviceListViewModel {
     private(set) var devices: [Device] = []
     private(set) var isLoading = false
     private(set) var errorMessage: String?
+    private(set) var isShowingStaleData = false
 
     var searchText = ""
     var statusFilter: Int8? = nil
@@ -49,11 +50,14 @@ final class DeviceListViewModel {
                 ]
             )
             devices = result.items
+            isShowingStaleData = false
             WidgetSnapshotStore.save(devices: devices)
         } catch let error as APIError {
             errorMessage = error.errorDescription
+            isShowingStaleData = !devices.isEmpty
         } catch {
             errorMessage = error.localizedDescription
+            isShowingStaleData = !devices.isEmpty
         }
 
         isLoading = false
@@ -98,5 +102,9 @@ final class DeviceListViewModel {
 
     func unreadCount(for deviceId: String) -> Int {
         devices.first(where: { $0.deviceId == deviceId })?.agentUnreadCount ?? 0
+    }
+
+    func clearError() {
+        errorMessage = nil
     }
 }

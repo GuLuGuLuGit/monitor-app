@@ -52,4 +52,11 @@ final class AuthManager {
         isAuthenticated = false
         WidgetSnapshotStore.clear()
     }
+
+    func handleUnauthorized() async {
+        await KeychainStore.shared.clearAll()
+        currentAdmin = nil
+        isAuthenticated = false
+        WidgetSnapshotStore.clear()
+    }
 }

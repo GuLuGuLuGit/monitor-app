@@ -414,8 +414,13 @@ private struct LingkongUnreadWidgetView: View {
 }
 
 private extension View {
+    @ViewBuilder
     func widgetShell() -> some View {
-        self.containerBackground(.background, for: .widget)
+        if #available(iOS 17.0, *) {
+            self.containerBackground(.background, for: .widget)
+        } else {
+            self
+        }
     }
 }
 

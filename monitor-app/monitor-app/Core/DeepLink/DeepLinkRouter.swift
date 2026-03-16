@@ -1,5 +1,5 @@
 import Foundation
-import Observation
+import Combine
 
 enum DeepLink: Equatable {
     case device(id: String)
@@ -26,13 +26,12 @@ enum DeepLink: Equatable {
     }
 }
 
-@Observable
 @MainActor
-final class DeepLinkRouter {
+final class DeepLinkRouter: ObservableObject {
     static let shared = DeepLinkRouter()
 
-    var pendingDeepLink: DeepLink?
-    var selectedTab: Int = 0
+    @Published var pendingDeepLink: DeepLink?
+    @Published var selectedTab: Int = 0
 
     private init() {}
 

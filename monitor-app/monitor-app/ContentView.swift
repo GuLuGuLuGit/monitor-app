@@ -86,19 +86,27 @@ struct ContentView: View {
 }
 
 struct MainTabView: View {
-    @State private var router = DeepLinkRouter.shared
+    @StateObject private var router = DeepLinkRouter.shared
 
     var body: some View {
         TabView(selection: $router.selectedTab) {
-            Tab("设备", systemImage: "desktopcomputer", value: 0) {
-                DeviceListView()
-            }
-            Tab("命令", systemImage: "terminal.fill", value: 1) {
-                CommandListView()
-            }
-            Tab("设置", systemImage: "gearshape.fill", value: 2) {
-                SettingsView()
-            }
+            DeviceListView()
+                .tabItem {
+                    Label("设备", systemImage: "desktopcomputer")
+                }
+                .tag(0)
+
+            CommandListView()
+                .tabItem {
+                    Label("命令", systemImage: "terminal.fill")
+                }
+                .tag(1)
+
+            SettingsView()
+                .tabItem {
+                    Label("设置", systemImage: "gearshape.fill")
+                }
+                .tag(2)
         }
         .tint(AppColors.primary)
     }

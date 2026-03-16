@@ -14,11 +14,16 @@ final class DeviceDetailViewModel {
     private(set) var recentAgentActivity: [String: Date] = [:]
     private(set) var isLoading = false
     private(set) var errorMessage: String?
+    private(set) var isShowingStaleData = false
 
     private var refreshTimer: Timer?
 
-    init(deviceId: UInt) {
-        self.deviceId = deviceId
+    init(device: Device) {
+        self.deviceId = device.id
+        self.device = device
+        if let extraJson = device.extraData, let data = extraJson.data(using: .utf8) {
+            self.openClawInfo = Self.parseOpenClawInfo(data)
+        }
     }
 
     func load() async {
@@ -28,14 +33,17 @@ final class DeviceDetailViewModel {
         do {
             let d: Device = try await APIClient.shared.request(.device(id: deviceId))
             device = d
+            isShowingStaleData = false
 
             if let extraJson = d.extraData, let data = extraJson.data(using: .utf8) {
                 openClawInfo = Self.parseOpenClawInfo(data)
             }
         } catch let error as APIError {
             errorMessage = error.errorDescription
+            isShowingStaleData = device != nil
         } catch {
             errorMessage = error.localizedDescription
+            isShowingStaleData = device != nil
         }
 
         isLoading = false
@@ -68,7 +76,9 @@ final class DeviceDetailViewModel {
             skills = result.items
             skillTotal = result.pagination?.total ?? result.items.count
         } catch {
-            // Skills are non-critical
+            if skills.isEmpty {
+                skillTotal = 0
+            }
         }
     }
 
@@ -91,7 +101,6 @@ final class DeviceDetailViewModel {
             )
             metrics = result.items.sorted { $0.metricTime < $1.metricTime }
         } catch {
-            metrics = []
             print("[DeviceDetail] load metrics failed for device \(deviceId): \(error)")
         }
     }
@@ -124,7 +133,9 @@ final class DeviceDetailViewModel {
             }
             recentAgentActivity = latestByAgent
         } catch {
-            // Non-critical
+            if recentAgentActivity.isEmpty {
+                recentAgentActivity = [:]
+            }
         }
     }
 
@@ -148,5 +159,9 @@ final class DeviceDetailViewModel {
     func stopAutoRefresh() {
         refreshTimer?.invalidate()
         refreshTimer = nil
+    }
+
+    func clearError() {
+        errorMessage = nil
     }
 }

@@ -118,7 +118,7 @@ struct SettingsView: View {
                         sectionBlock(title: "关于") {
                             groupedInfoRow(icon: "app.badge", title: "版本", subtitle: appVersionText, tint: AppColors.primary)
                             groupedInfoRow(icon: "cpu", title: "兼容设备", subtitle: "已安装 OpenClaw 的设备", tint: AppColors.textSecondary)
-                            groupedInfoRow(icon: "iphone", title: "最低版本", subtitle: "iOS 16.0", tint: AppColors.textSecondary)
+                            groupedInfoRow(icon: "iphone", title: "最低版本", subtitle: "iOS 17.0", tint: AppColors.textSecondary)
                         }
 
                         sectionBlock(title: nil) {

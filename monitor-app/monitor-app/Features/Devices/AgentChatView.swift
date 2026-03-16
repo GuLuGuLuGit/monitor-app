@@ -28,7 +28,6 @@ struct AgentChatView: View {
     @State private var speechChecked = false
     @State private var speechAvailable = false
 
-    @State private var publicKeyCache: String?
 
     @FocusState private var isInputFocused: Bool
     @FocusState private var isAgentNameFocused: Bool
@@ -113,6 +112,7 @@ struct AgentChatView: View {
             guard let event else { return }
             handleIncomingEvent(event)
         }
+        .toolbar(.hidden, for: .tabBar)
     }
 
     private var agentRoster: some View {
@@ -239,34 +239,13 @@ struct AgentChatView: View {
             inputBar
         }
         .frame(maxWidth: .infinity, minHeight: 420, alignment: .top)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusLarge))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusLarge)
-                .stroke(AppColors.borderColor, lineWidth: 1)
-        )
-        .shadow(color: AppTheme.neumorphicShadow, radius: AppTheme.cardShadowRadius, x: 3, y: 3)
-        .shadow(color: AppTheme.neumorphicLight, radius: AppTheme.cardShadowRadius, x: -3, y: -3)
     }
 
     private var chatHeader: some View {
-        HStack(spacing: 12) {
-            if let activeAgent,
-               let current = agents.first(where: { $0.id == activeAgent.id }) {
-                Circle()
-                    .fill(isAgentOnline(current) ? AppColors.success : AppColors.disabled)
-                    .frame(width: 10, height: 10)
-            } else {
-                Circle()
-                    .fill(AppColors.primary)
-                    .frame(width: 10, height: 10)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(activeAgent?.name ?? "Agent")
-                    .font(.headline)
-                    .foregroundStyle(AppColors.textTitle)
-            }
+        HStack(spacing: 10) {
+            Text(activeAgent?.name ?? "Agent")
+                .font(.headline)
+                .foregroundStyle(AppColors.textTitle)
             Spacer()
             if isLoadingHistory {
                 ProgressView()
@@ -274,8 +253,8 @@ struct AgentChatView: View {
                     .scaleEffect(0.8)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 10)
     }
 
     private var chatScrollArea: some View {
@@ -308,7 +287,6 @@ struct AgentChatView: View {
                 .padding(16)
             }
             .scrollIndicators(.hidden)
-            .background(Color.white.opacity(0.18))
             .onChange(of: messages.count) { _, _ in
                 withAnimation {
                     proxy.scrollTo("bottom", anchor: .bottom)
@@ -689,9 +667,7 @@ struct AgentChatView: View {
     }
 
     private func fetchPublicKey() async throws -> String {
-        if let cached = publicKeyCache { return cached }
         let response: PublicKeyResponse = try await APIClient.shared.request(.devicePublicKey(id: deviceInternalId))
-        publicKeyCache = response.publicKey
         return response.publicKey
     }
 

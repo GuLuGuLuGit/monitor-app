@@ -6,7 +6,6 @@ struct CommandPanelView: View {
     @State private var showConfirm = false
     @State private var pendingCommand: AgentCommand.CommandType?
     @State private var pendingParams: [String: Any]?
-    @State private var showParamSheet = false
     @State private var paramSheetType: AgentCommand.CommandType?
 
     var body: some View {
@@ -60,6 +59,12 @@ struct CommandPanelView: View {
                     )
                     if success {
                         ToastManager.shared.show(.success, message: "\(cmd.label)已发送", duration: 2)
+                    } else {
+                        ToastManager.shared.show(
+                            .error,
+                            message: viewModel.errorMessage ?? "\(cmd.label)发送失败",
+                            duration: 4
+                        )
                     }
                 }
                 pendingCommand = nil
@@ -70,21 +75,23 @@ struct CommandPanelView: View {
                 Text("确定要对 \(device.hostname) 执行「\(cmd.label)」操作吗？")
             }
         }
-        .sheet(isPresented: $showParamSheet) {
-            if let cmdType = paramSheetType {
-                ParamSheetView(commandType: cmdType) { params in
-                    showParamSheet = false
-                    pendingCommand = cmdType
-                    pendingParams = params
-                    showConfirm = true
-                }
-                .presentationDetents([.medium])
+        .sheet(item: $paramSheetType) { cmdType in
+            ParamSheetView(commandType: cmdType) { params in
+                paramSheetType = nil
+                pendingCommand = cmdType
+                pendingParams = params
+                showConfirm = true
             }
+            .presentationDetents([.medium])
         }
         .overlay {
             if viewModel.isSending {
                 LoadingOverlay(message: "发送中")
             }
+        }
+        .onChange(of: viewModel.errorMessage) { _, newValue in
+            guard let newValue, !newValue.isEmpty, !viewModel.isSending else { return }
+            ToastManager.shared.show(.error, message: newValue, duration: 4)
         }
     }
 
@@ -92,7 +99,6 @@ struct CommandPanelView: View {
         Button {
             if type.needsParams {
                 paramSheetType = type
-                showParamSheet = true
             } else {
                 pendingCommand = type
                 pendingParams = nil
@@ -175,60 +181,111 @@ struct CommandPanelView: View {
     }
 }
 
+extension AgentCommand.CommandType: Identifiable {
+    var id: String { rawValue }
+}
+
 private struct ParamSheetView: View {
     let commandType: AgentCommand.CommandType
     let onConfirm: ([String: Any]?) -> Void
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
-            List {
-                switch commandType {
-                case .gateway:
-                    Section("Gateway 管理") {
-                        paramRow("查看状态", params: ["action": "status"])
-                        paramRow("健康检查", params: ["action": "health"])
-                        paramRow("重启 Gateway", params: ["action": "restart"])
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(commandType.label)
+                        .font(.headline)
+                        .foregroundStyle(AppColors.textTitle)
+                    Text(sheetSubtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(AppColors.textSecondary)
+                }
+                Spacer()
+                Button("关闭") { dismiss() }
+                    .font(.subheadline)
+                    .foregroundStyle(AppColors.textSecondary)
+            }
+
+            VStack(spacing: 0) {
+                ForEach(Array(sheetOptions.enumerated()), id: \.offset) { index, option in
+                    paramRow(option.title, params: option.params)
+                    if index < sheetOptions.count - 1 {
+                        Divider()
+                            .padding(.leading, 44)
                     }
-                case .logs:
-                    Section("查看日志") {
-                        paramRow("最近 50 行", params: ["lines": 50])
-                        paramRow("最近 200 行", params: ["lines": 200])
-                        paramRow("最近 500 行", params: ["lines": 500])
-                    }
-                case .update:
-                    Section("版本更新") {
-                        paramRow("检查更新", params: ["action": "check"])
-                        paramRow("执行更新", params: ["action": "apply"])
-                        paramRow("更新到 Beta", params: ["action": "apply", "channel": "beta"])
-                    }
-                case .sessions:
-                    Section("会话管理") {
-                        paramRow("查看会话列表", params: ["action": "list"])
-                        paramRow("清理预览 (dry-run)", params: ["action": "cleanup", "dry_run": true])
-                        paramRow("执行清理", params: ["action": "cleanup"])
-                    }
-                case .security:
-                    Section("安全审计") {
-                        paramRow("标准审计", params: [:])
-                        paramRow("深度审计", params: ["deep": true])
-                    }
-                case .config:
-                    Section("配置管理") {
-                        paramRow("读取配置", params: ["action": "read"])
-                        paramRow("验证配置", params: ["action": "validate"])
-                    }
-                default:
-                    EmptyView()
                 }
             }
-            .navigationTitle(commandType.label)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }
-                }
-            }
+            .background(Color.white.opacity(0.32))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.cornerRadius)
+                    .stroke(AppColors.borderColor, lineWidth: 1)
+            )
+
+            Spacer(minLength: 0)
+        }
+        .padding(20)
+        .background(
+            LinearGradient(
+                colors: [AppColors.bgPrimary, AppColors.bgSecondary],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+        )
+    }
+
+    private var sheetSubtitle: String {
+        switch commandType {
+        case .gateway: "选择要执行的 Gateway 操作"
+        case .logs: "选择日志查看范围"
+        case .update: "选择更新方式"
+        case .sessions: "选择会话管理操作"
+        case .security: "选择安全审计级别"
+        case .config: "选择配置相关操作"
+        default: "选择一个操作"
+        }
+    }
+
+    private var sheetOptions: [(title: String, params: [String: Any])] {
+        switch commandType {
+        case .gateway:
+            return [
+                ("查看状态", ["action": "status"]),
+                ("健康检查", ["action": "health"]),
+                ("重启 Gateway", ["action": "restart"]),
+            ]
+        case .logs:
+            return [
+                ("最近 50 行", ["lines": 50]),
+                ("最近 200 行", ["lines": 200]),
+                ("最近 500 行", ["lines": 500]),
+            ]
+        case .update:
+            return [
+                ("检查更新", ["action": "check"]),
+                ("执行更新", ["action": "apply"]),
+                ("更新到 Beta", ["action": "apply", "channel": "beta"]),
+            ]
+        case .sessions:
+            return [
+                ("查看会话列表", ["action": "list"]),
+                ("清理预览 (dry-run)", ["action": "cleanup", "dry_run": true]),
+                ("执行清理", ["action": "cleanup"]),
+            ]
+        case .security:
+            return [
+                ("标准审计", [:]),
+                ("深度审计", ["deep": true]),
+            ]
+        case .config:
+            return [
+                ("读取配置", ["action": "read"]),
+                ("验证配置", ["action": "validate"]),
+            ]
+        default:
+            return []
         }
     }
 
@@ -237,13 +294,22 @@ private struct ParamSheetView: View {
             onConfirm(params.isEmpty ? nil : params)
         } label: {
             HStack {
+                Image(systemName: commandType.icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(AppColors.primary)
+                    .frame(width: 24)
                 Text(label)
+                    .font(.body)
                     .foregroundStyle(AppColors.textPrimary)
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.caption)
                     .foregroundStyle(AppColors.textSecondary)
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 }
