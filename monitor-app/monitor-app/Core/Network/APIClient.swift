@@ -3,6 +3,12 @@ import Foundation
 actor APIClient {
     static let shared = APIClient()
 
+    private enum RefreshResult {
+        case refreshed
+        case invalidSession
+        case transientFailure
+    }
+
     private let session: URLSession
     private var isRefreshing = false
     private var pendingRequests: [CheckedContinuation<Void, Never>] = []
@@ -66,13 +72,15 @@ actor APIClient {
         let httpResponse = response as! HTTPURLResponse
 
         if endpoint.requiresAuth && httpResponse.statusCode == 401 {
-            let refreshed = await refreshTokenIfNeeded()
-            if refreshed {
+            switch await refreshTokenIfNeeded() {
+            case .refreshed:
                 return try await request(endpoint, bodyData: bodyData, queryItems: queryItems)
-            } else {
+            case .invalidSession:
                 await KeychainStore.shared.clearAll()
                 await AuthManager.shared.handleUnauthorized()
                 throw APIError.unauthorized
+            case .transientFailure:
+                throw APIError.server(code: 401, message: "登录状态校验失败，请稍后重试")
             }
         }
 
@@ -111,12 +119,12 @@ actor APIClient {
 
     // MARK: - Token refresh
 
-    private func refreshTokenIfNeeded() async -> Bool {
+    private func refreshTokenIfNeeded() async -> RefreshResult {
         if isRefreshing {
             await withCheckedContinuation { continuation in
                 pendingRequests.append(continuation)
             }
-            return await KeychainStore.shared.getToken() != nil
+            return await KeychainStore.shared.getToken() != nil ? .refreshed : .invalidSession
         }
 
         isRefreshing = true
@@ -129,7 +137,7 @@ actor APIClient {
         }
 
         guard let currentToken = await KeychainStore.shared.getToken() else {
-            return false
+            return .invalidSession
         }
 
         do {
@@ -141,15 +149,19 @@ actor APIClient {
             let (data, response) = try await performRequest(urlRequest)
             let httpResponse = response as! HTTPURLResponse
 
-            guard httpResponse.statusCode == 200 else { return false }
+            guard httpResponse.statusCode == 200 else {
+                return httpResponse.statusCode == 401 ? .invalidSession : .transientFailure
+            }
 
             let apiResponse = try JSONDecoder.api.decode(APIResponse<RefreshTokenResponse>.self, from: data)
-            guard apiResponse.code == 0, let refreshData = apiResponse.data else { return false }
+            guard apiResponse.code == 0, let refreshData = apiResponse.data else {
+                return .transientFailure
+            }
 
             await KeychainStore.shared.saveToken(refreshData.token)
-            return true
+            return .refreshed
         } catch {
-            return false
+            return .transientFailure
         }
     }
 

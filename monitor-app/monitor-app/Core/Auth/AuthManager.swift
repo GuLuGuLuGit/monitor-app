@@ -22,10 +22,16 @@ final class AuthManager {
             let admin: AdminInfo = try await APIClient.shared.request(.me)
             currentAdmin = admin
             isAuthenticated = true
+        } catch let error as APIError {
+            if case .unauthorized = error {
+                isAuthenticated = false
+                await KeychainStore.shared.clearAll()
+                WidgetSnapshotStore.clear()
+                return
+            }
+            isAuthenticated = true
         } catch {
-            isAuthenticated = false
-            await KeychainStore.shared.clearAll()
-            WidgetSnapshotStore.clear()
+            isAuthenticated = true
         }
     }
 
