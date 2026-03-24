@@ -201,6 +201,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				"zh-Hans",
 				Base,
 			);
 			mainGroup = FF9F95C72F605E190093273E;
@@ -385,15 +386,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "monitor-app/monitor-app.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "monitor-app/monitor-app.debug.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 3R5N3T96FQ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "monitor-app/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "灵控台";
-				INFOPLIST_KEY_NSFaceIDUsageDescription = "灵控台使用 Face ID 保护您的管理数据安全";
+				INFOPLIST_KEY_CFBundleDisplayName = "爪群";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "爪群使用 Face ID 保护您的管理数据安全";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -403,10 +404,13 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.mayunfeng.monitor-app";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -421,15 +425,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "monitor-app/monitor-app.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "monitor-app/monitor-app.release.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 3R5N3T96FQ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "monitor-app/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "灵控台";
-				INFOPLIST_KEY_NSFaceIDUsageDescription = "灵控台使用 Face ID 保护您的管理数据安全";
+				INFOPLIST_KEY_CFBundleDisplayName = "爪群";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "爪群使用 Face ID 保护您的管理数据安全";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -439,10 +443,13 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.mayunfeng.monitor-app";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -463,14 +470,14 @@
 				DEVELOPMENT_TEAM = 3R5N3T96FQ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = OpenClawWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "灵控台组件";
+				INFOPLIST_KEY_CFBundleDisplayName = "爪群组件";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.mayunfeng.monitor-app.OpenClawWidget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -494,14 +501,14 @@
 				DEVELOPMENT_TEAM = 3R5N3T96FQ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = OpenClawWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "灵控台组件";
+				INFOPLIST_KEY_CFBundleDisplayName = "爪群组件";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.mayunfeng.monitor-app.OpenClawWidget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

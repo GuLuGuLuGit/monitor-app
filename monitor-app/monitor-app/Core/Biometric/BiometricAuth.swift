@@ -58,7 +58,7 @@ final class BiometricAuth {
         do {
             let success = try await context.evaluatePolicy(
                 .deviceOwnerAuthenticationWithBiometrics,
-                localizedReason: "解锁灵控台"
+                localizedReason: "解锁爪群"
             )
             if success {
                 isLocked = false

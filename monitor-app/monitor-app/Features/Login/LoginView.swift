@@ -20,7 +20,7 @@ struct LoginView: View {
                             .foregroundStyle(AppColors.gradientPrimary)
                             .shadow(color: AppColors.primary.opacity(0.3), radius: 16)
 
-                        Text("灵控台")
+                        Text("爪群")
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                             .foregroundStyle(AppColors.textTitle)
 
@@ -130,16 +130,31 @@ struct LoginView: View {
                         }
                         .disabled(!viewModel.isFormValid || viewModel.isLoading)
 
-                        HStack {
-                            NavigationLink("注册", destination: RegisterView())
-                                .font(.subheadline)
-                                .foregroundStyle(AppColors.primary)
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                NavigationLink("注册", destination: RegisterView())
+                                    .font(.subheadline)
+                                    .foregroundStyle(AppColors.primary)
 
-                            Spacer()
+                                Spacer()
 
-                            NavigationLink("忘记密码", destination: ForgotPasswordView())
-                                .font(.subheadline)
-                                .foregroundStyle(AppColors.primary)
+                                NavigationLink("忘记密码", destination: ForgotPasswordView())
+                                    .font(.subheadline)
+                                    .foregroundStyle(AppColors.primary)
+                            }
+
+                            HStack {
+                                Button {
+                                    viewModel.useDemoAccount()
+                                } label: {
+                                    Text("体验演示")
+                                        .font(.subheadline)
+                                        .foregroundStyle(AppColors.textSecondary)
+                                }
+                                .buttonStyle(.plain)
+
+                                Spacer()
+                            }
                         }
                     }
                     .padding(24)

@@ -14,7 +14,9 @@ struct PairingView: View {
             ZStack {
                 AppColors.gradientBg.ignoresSafeArea()
 
-                if let device = pairedDeviceInfo {
+                if AuthManager.shared.isDemoMode {
+                    demoUnavailableView
+                } else if let device = pairedDeviceInfo {
                     successView(device)
                 } else {
                     inputView
@@ -29,6 +31,35 @@ struct PairingView: View {
                 }
             }
         }
+    }
+
+
+    private var demoUnavailableView: some View {
+        VStack(spacing: 18) {
+            Spacer()
+            Image(systemName: "sparkles.rectangle.stack")
+                .font(.system(size: 52))
+                .foregroundStyle(AppColors.primary)
+            Text("演示模式不可添加设备")
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundStyle(AppColors.textTitle)
+            Text("当前账号使用本地测试数据，不会连接真实设备或提交配对码。")
+                .font(.subheadline)
+                .foregroundStyle(AppColors.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+            Button("关闭") { dismiss() }
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(AppColors.gradientPrimary)
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
+                .padding(.horizontal)
+            Spacer()
+        }
+        .padding()
     }
 
     private var inputView: some View {
@@ -155,6 +186,7 @@ struct PairingView: View {
             .cardStyle()
 
             Button {
+                NotificationCenter.default.post(name: .deviceDataShouldRefresh, object: nil)
                 dismiss()
             } label: {
                 Text("完成")
@@ -184,6 +216,7 @@ struct PairingView: View {
             withAnimation {
                 pairedDeviceInfo = response
             }
+            NotificationCenter.default.post(name: .deviceDataShouldRefresh, object: nil)
         } catch let error as APIError {
             errorMessage = error.errorDescription
             pairingCode = ""

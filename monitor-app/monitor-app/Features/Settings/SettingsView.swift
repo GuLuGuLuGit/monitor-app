@@ -20,16 +20,14 @@ struct SettingsView: View {
     }
 
     @State private var biometric = BiometricAuth.shared
+    @State private var authManager = AuthManager.shared
     @State private var showLogoutConfirm = false
+    @State private var showDeleteSheet = false
     @State private var activeSheet: SettingsSheet?
     @State private var copied = false
 
     private var accountName: String {
         AuthManager.shared.currentAdmin?.nickname ?? "用户"
-    }
-
-    private var accountEmail: String {
-        AuthManager.shared.currentAdmin?.email ?? ""
     }
 
     private var installCommand: String {
@@ -56,6 +54,25 @@ struct SettingsView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         topProfileCard
+                        sectionBlock(title: "账号") {
+                            groupedInfoRow(
+                                icon: "person.text.rectangle",
+                                title: authManager.isDemoMode ? "当前身份" : "登录账号",
+                                subtitle: authManager.isDemoMode ? "演示模式（仅本地示例数据）" : (authManager.currentAdmin?.email ?? authManager.currentAdmin?.username ?? "当前已登录"),
+                                tint: AppColors.primary,
+                                showsDivider: true
+                            )
+                            groupedActionRow(
+                                icon: "person.crop.circle.badge.minus",
+                                title: "删除账号",
+                                subtitle: authManager.isDemoMode ? "清除本地演示数据并退出当前演示账号" : "永久删除账号、已绑定设备、命令历史与消息记录",
+                                tint: AppColors.error,
+                                destructive: true,
+                                showsDivider: false
+                            ) {
+                                showDeleteSheet = true
+                            }
+                        }
                         sectionBlock(title: "安全") {
                             if biometric.isAvailable {
                                 groupedToggleRow(
@@ -75,44 +92,53 @@ struct SettingsView: View {
                         }
 
                         sectionBlock(title: "设备接入") {
-                            groupedActionRow(
-                                icon: "link.badge.plus",
-                                title: "添加设备",
-                                subtitle: "输入配对码，将设备添加到我的设备",
-                                tint: AppColors.primary
-                            ) {
-                                activeSheet = .addDevice
+                            if authManager.isDemoMode {
+                                groupedInfoRow(
+                                    icon: "sparkles.rectangle.stack",
+                                    title: "演示模式",
+                                    subtitle: "当前账号使用本地测试数据，安装与配对入口已关闭",
+                                    tint: AppColors.primary
+                                )
+                            } else {
+                                groupedActionRow(
+                                    icon: "link.badge.plus",
+                                    title: "添加设备",
+                                    subtitle: "输入配对码，将设备添加到我的设备",
+                                    tint: AppColors.primary
+                                ) {
+                                    activeSheet = .addDevice
+                                }
+                                groupedActionRow(
+                                    icon: "terminal",
+                                    title: "安装命令",
+                                    subtitle: "在 macOS 终端安装爪群助手",
+                                    tint: AppColors.primary
+                                ) {
+                                    activeSheet = .installCommand
+                                }
+                                groupedActionRow(
+                                    icon: "trash",
+                                    title: "卸载命令",
+                                    subtitle: "移除爪群助手",
+                                    tint: AppColors.textSecondary
+                                ) {
+                                    activeSheet = .uninstallCommand
+                                }
+                                groupedActionRow(
+                                    icon: "questionmark.circle",
+                                    title: "配对说明",
+                                    subtitle: "查看安装、配对和绑定步骤",
+                                    tint: AppColors.textSecondary
+                                ) {
+                                    activeSheet = .pairingHelp
+                                }
+                                groupedInfoRow(
+                                    icon: "laptopcomputer",
+                                    title: "当前支持平台",
+                                    subtitle: "macOS",
+                                    tint: AppColors.primary
+                                )
                             }
-                            groupedActionRow(
-                                icon: "terminal",
-                                title: "安装命令",
-                                subtitle: "在 macOS 终端安装灵控台助手",
-                                tint: AppColors.primary
-                            ) {
-                                activeSheet = .installCommand
-                            }
-                            groupedActionRow(
-                                icon: "trash",
-                                title: "卸载命令",
-                                subtitle: "移除灵控台助手",
-                                tint: AppColors.textSecondary
-                            ) {
-                                activeSheet = .uninstallCommand
-                            }
-                            groupedActionRow(
-                                icon: "questionmark.circle",
-                                title: "配对说明",
-                                subtitle: "查看安装、配对和绑定步骤",
-                                tint: AppColors.textSecondary
-                            ) {
-                                activeSheet = .pairingHelp
-                            }
-                            groupedInfoRow(
-                                icon: "laptopcomputer",
-                                title: "当前支持平台",
-                                subtitle: "macOS",
-                                tint: AppColors.primary
-                            )
                         }
 
                         sectionBlock(title: "关于") {
@@ -155,10 +181,26 @@ struct SettingsView: View {
                     CommandSheet(
                         title: "卸载命令",
                         command: uninstallCommand,
-                        footnote: "用于移除灵控台助手，不会删除 OpenClaw 主数据目录。"
+                        footnote: "用于移除爪群助手，不会删除 OpenClaw 主数据目录。"
                     )
                 case .pairingHelp:
                     PairingHelpSheet()
+                }
+            }
+            .sheet(isPresented: $showDeleteSheet) {
+                AccountDeletionSheet(
+                    isDemoMode: authManager.isDemoMode,
+                    accountName: accountName,
+                    accountIdentifier: authManager.currentAdmin?.email ?? authManager.currentAdmin?.username
+                ) {
+                    do {
+                        try await AuthManager.shared.deleteAccount()
+                        return nil
+                    } catch let error as APIError {
+                        return error.errorDescription ?? "删除失败，请稍后重试"
+                    } catch {
+                        return error.localizedDescription
+                    }
                 }
             }
             .alert("确认退出", isPresented: $showLogoutConfirm) {
@@ -189,7 +231,7 @@ struct SettingsView: View {
                 Text(accountName)
                     .font(.headline)
                     .foregroundStyle(AppColors.textPrimary)
-                Text("我的设备账号")
+                Text(authManager.isDemoMode ? "演示账号" : "我的设备账号")
                     .font(.caption2)
                     .fontWeight(.semibold)
                     .foregroundStyle(AppColors.primary)
@@ -245,7 +287,8 @@ struct SettingsView: View {
         title: String,
         subtitle: String,
         tint: Color,
-        monospaced: Bool = false
+        monospaced: Bool = false,
+        showsDivider: Bool = true
     ) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
@@ -272,7 +315,7 @@ struct SettingsView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
 
-        if title != "最低版本" && title != "当前支持平台" && title != "消息加密" {
+        if showsDivider {
             rowDivider()
         }
     }
@@ -284,6 +327,7 @@ struct SettingsView: View {
         subtitle: String,
         tint: Color,
         destructive: Bool = false,
+        showsDivider: Bool = true,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -313,7 +357,7 @@ struct SettingsView: View {
         }
         .buttonStyle(.plain)
 
-        if title != "退出登录" {
+        if showsDivider {
             rowDivider()
         }
     }
@@ -346,6 +390,139 @@ struct SettingsView: View {
         .padding(.vertical, 12)
 
         rowDivider()
+    }
+}
+
+private struct AccountDeletionSheet: View {
+    let isDemoMode: Bool
+    let accountName: String
+    let accountIdentifier: String?
+    let onConfirm: () async -> String?
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var confirmationText = ""
+    @State private var isSubmitting = false
+    @State private var errorMessage: String?
+
+    private var confirmKeyword: String { "DELETE" }
+
+    private var canSubmit: Bool {
+        !isSubmitting && confirmationText.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() == confirmKeyword
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppColors.gradientBg.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(isDemoMode ? "清除演示数据" : "删除账号")
+                                .font(.title3.weight(.bold))
+                                .foregroundStyle(AppColors.textTitle)
+                            Text(isDemoMode ? "这会移除当前设备上的演示数据，并立即退出演示模式。" : "这会永久删除当前账号以及该账号下的设备、命令记录、消息记录和相关配置。删除后无法恢复。")
+                                .font(.subheadline)
+                                .foregroundStyle(AppColors.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding()
+                        .cardStyle()
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            infoRow(title: "账号名称", value: accountName)
+                            if let accountIdentifier, !accountIdentifier.isEmpty {
+                                infoRow(title: "账号标识", value: accountIdentifier)
+                            }
+                            infoRow(title: "确认方式", value: "输入 \(confirmKeyword) 后才能继续")
+                        }
+                        .padding()
+                        .cardStyle()
+
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("确认删除")
+                                .font(.headline)
+                                .foregroundStyle(AppColors.textTitle)
+
+                            TextField(confirmKeyword, text: $confirmationText)
+                                .textInputAutocapitalization(.characters)
+                                .autocorrectionDisabled()
+                                .padding()
+                                .background(.ultraThinMaterial)
+                                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
+                                        .stroke(AppColors.borderColor, lineWidth: 1)
+                                )
+
+                            if let errorMessage {
+                                Text(errorMessage)
+                                    .font(.caption)
+                                    .foregroundStyle(AppColors.error)
+                            }
+
+                            Button {
+                                Task {
+                                    isSubmitting = true
+                                    errorMessage = nil
+                                    if let error = await onConfirm() {
+                                        errorMessage = error
+                                        isSubmitting = false
+                                        return
+                                    }
+                                    dismiss()
+                                }
+                            } label: {
+                                HStack(spacing: 8) {
+                                    if isSubmitting {
+                                        ProgressView()
+                                            .progressViewStyle(.circular)
+                                            .tint(.white)
+                                            .scaleEffect(0.8)
+                                    }
+                                    Text(isDemoMode ? "清除并退出" : "确认删除账号")
+                                        .fontWeight(.semibold)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 48)
+                                .background(
+                                    canSubmit
+                                        ? AppColors.gradientError
+                                        : LinearGradient(colors: [AppColors.disabled], startPoint: .leading, endPoint: .trailing)
+                                )
+                                .foregroundStyle(.white)
+                                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall))
+                            }
+                            .disabled(!canSubmit)
+                        }
+                        .padding()
+                        .cardStyle()
+                    }
+                    .padding()
+                }
+                .scrollIndicators(.hidden)
+            }
+            .navigationTitle(isDemoMode ? "清除演示数据" : "删除账号")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("取消") { dismiss() }
+                        .foregroundStyle(AppColors.primary)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func infoRow(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(AppColors.textSecondary)
+            Text(value)
+                .foregroundStyle(AppColors.textPrimary)
+                .textSelection(.enabled)
+        }
     }
 }
 

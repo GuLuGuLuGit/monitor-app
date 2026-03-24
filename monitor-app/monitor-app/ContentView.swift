@@ -22,7 +22,7 @@ struct ContentView: View {
         .preferredColorScheme(.light)
         .task {
             await authManager.checkAuthState()
-            if authManager.isAuthenticated {
+            if authManager.isAuthenticated && !authManager.isDemoMode {
                 await PushNotificationManager.shared.requestAuthorization()
             }
             withAnimation(.easeInOut(duration: 0.3)) {
@@ -57,7 +57,7 @@ struct ContentView: View {
                     .foregroundStyle(AppColors.primary)
                     .shadow(color: AppColors.primary.opacity(0.3), radius: 12)
 
-                Text("灵控台已锁定")
+                Text("爪群已锁定")
                     .font(.title3)
                     .fontWeight(.bold)
                     .foregroundStyle(AppColors.textTitle)
@@ -87,6 +87,7 @@ struct ContentView: View {
 
 struct MainTabView: View {
     @StateObject private var router = DeepLinkRouter.shared
+    @State private var authManager = AuthManager.shared
 
     var body: some View {
         TabView(selection: $router.selectedTab) {
@@ -109,5 +110,24 @@ struct MainTabView: View {
                 .tag(2)
         }
         .tint(AppColors.primary)
+        .safeAreaInset(edge: .top) {
+            if authManager.isDemoMode {
+                HStack(spacing: 8) {
+                    Image(systemName: "person.crop.rectangle.badge.checkmark")
+                    Text("演示模式：当前数据为本地测试数据，不会操作真实设备")
+                        .lineLimit(2)
+                }
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(AppColors.primary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.white.opacity(0.88))
+                .overlay(alignment: .bottom) {
+                    Divider().background(AppColors.borderColor)
+                }
+            }
+        }
     }
 }

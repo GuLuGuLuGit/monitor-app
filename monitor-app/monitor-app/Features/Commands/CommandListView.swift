@@ -80,53 +80,7 @@ struct CommandListView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                AppColors.gradientBg.ignoresSafeArea()
-
-                if viewModel.isLoading && viewModel.commands.isEmpty {
-                    ProgressView().tint(AppColors.primary)
-                } else {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 14) {
-                            filterBar
-
-                            if filteredCommands.isEmpty {
-                                EmptyStateView(
-                                    icon: "line.3.horizontal.decrease.circle",
-                                    title: "无匹配记录",
-                                    subtitle: "切换筛选"
-                                )
-                                .padding(.top, 24)
-                            } else {
-                                LazyVStack(spacing: 10) {
-                                    ForEach(filteredCommands) { command in
-                                        Button {
-                                            selectedCommand = command
-                                        } label: {
-                                            CommandRowView(command: command)
-                                        }
-                                        .buttonStyle(.plain)
-                                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                            if command.isDeletable {
-                                                Button(role: .destructive) {
-                                                    pendingDeleteCommand = command
-                                                } label: {
-                                                    Label("删除", systemImage: "trash")
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.horizontal, AppTheme.pageHorizontalPadding)
-                        .padding(.vertical, 16)
-                        .padding(.top, topContentSpacing)
-                    }
-                    .scrollIndicators(.hidden)
-                    .refreshable { await viewModel.loadCommands() }
-                }
-            }
+            contentView
             .navigationTitle("命令")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -196,6 +150,69 @@ struct CommandListView: View {
         .task {
             await viewModel.loadCommands()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .demoModeDataDidChange)) { _ in
+            guard AuthManager.shared.isDemoMode else { return }
+            Task { await viewModel.loadCommands() }
+        }
+    }
+
+    private var contentView: some View {
+        ZStack {
+            AppColors.gradientBg.ignoresSafeArea()
+
+            if viewModel.isLoading && viewModel.commands.isEmpty {
+                ProgressView().tint(AppColors.primary)
+            } else {
+                commandScrollView
+            }
+        }
+    }
+
+    private var commandScrollView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                filterBar
+
+                if filteredCommands.isEmpty {
+                    EmptyStateView(
+                        icon: "line.3.horizontal.decrease.circle",
+                        title: "无匹配记录",
+                        subtitle: "切换筛选"
+                    )
+                    .padding(.top, 24)
+                } else {
+                    commandRows
+                }
+            }
+            .padding(.horizontal, AppTheme.pageHorizontalPadding)
+            .padding(.vertical, 16)
+            .padding(.top, topContentSpacing)
+        }
+        .scrollIndicators(.hidden)
+        .refreshable { await viewModel.loadCommands() }
+    }
+
+    private var commandRows: some View {
+        LazyVStack(spacing: 10) {
+            ForEach(filteredCommands) { command in
+                Button {
+                    selectedCommand = command
+                } label: {
+                    CommandRowView(command: command)
+                }
+                .buttonStyle(.plain)
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    if command.isDeletable {
+                        Button(role: .destructive) {
+                            pendingDeleteCommand = command
+                        } label: {
+                            Label("删除", systemImage: "trash")
+                        }
+                    }
+                }
+            }
+        }
+        .transaction { $0.animation = nil }
     }
 
     private var filterBar: some View {
@@ -206,7 +223,7 @@ struct CommandListView: View {
             ) {
                 ForEach(StatusFilter.allCases) { filter in
                     Button(filter.label) {
-                        statusFilter = filter
+                        applyStatusFilter(filter)
                     }
                 }
             }
@@ -217,7 +234,7 @@ struct CommandListView: View {
             ) {
                 ForEach(GroupFilter.allCases) { filter in
                     Button(filter.label) {
-                        groupFilter = filter
+                        applyGroupFilter(filter)
                     }
                 }
             }
@@ -297,6 +314,26 @@ struct CommandListView: View {
             infoMessage = deleted > 0 ? "已删除 \(deleted) 条" : "无可删除记录"
         } else {
             infoMessage = viewModel.errorMessage ?? "清理失败"
+        }
+    }
+
+    private func applyStatusFilter(_ filter: StatusFilter) {
+        DispatchQueue.main.async {
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                statusFilter = filter
+            }
+        }
+    }
+
+    private func applyGroupFilter(_ filter: GroupFilter) {
+        DispatchQueue.main.async {
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                groupFilter = filter
+            }
         }
     }
 }

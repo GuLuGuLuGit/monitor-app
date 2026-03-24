@@ -17,6 +17,7 @@ struct AgentChatView: View {
     @State private var isLoadingHistory = false
     @State private var didInitialize = false
     @State private var isRecording = false
+    @State private var isChatVisible = false
     @State private var unreadAgentIds: Set<String> = []
     @State private var liveOnlineAgentIds: Set<String> = []
     @State private var messageClient = AgentMessageClient()
@@ -27,6 +28,7 @@ struct AgentChatView: View {
     @State private var audioEngine: AVAudioEngine?
     @State private var speechChecked = false
     @State private var speechAvailable = false
+    @State private var historyErrorMessage: String?
 
 
     @FocusState private var isInputFocused: Bool
@@ -97,20 +99,34 @@ struct AgentChatView: View {
             .padding()
         }
         .onAppear {
+            isChatVisible = true
+            unreadAgentIds = Set(agents.compactMap { ($0.agentUnreadCount ?? 0) > 0 ? $0.id : nil })
             if !didInitialize {
                 didInitialize = true
                 if let selectedAgent {
                     selectAgent(selectedAgent)
                 }
             }
-            Task { await messageClient.connect(deviceId: deviceId) }
+            if !AuthManager.shared.isDemoMode {
+                Task { await messageClient.connect(deviceId: deviceId) }
+            }
         }
         .onDisappear {
+            isChatVisible = false
             messageClient.disconnect()
         }
         .onChange(of: messageClient.latestEvent) { _, event in
-            guard let event else { return }
+            guard let event, !AuthManager.shared.isDemoMode else { return }
             handleIncomingEvent(event)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .demoModeDataDidChange)) { _ in
+            guard AuthManager.shared.isDemoMode, let agentId = activeAgent?.id else { return }
+            Task {
+                await loadHistory(agentId: agentId)
+                if isChatVisible {
+                    await markAgentRead(agentId)
+                }
+            }
         }
         .toolbar(.hidden, for: .tabBar)
     }
@@ -247,6 +263,20 @@ struct AgentChatView: View {
                         ProgressView()
                             .tint(AppColors.primary)
                             .padding()
+                    } else if let historyErrorMessage, messages.isEmpty {
+                        VStack(spacing: 10) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.system(size: 28))
+                                .foregroundStyle(AppColors.warning.opacity(0.8))
+                            Text("聊天记录加载失败")
+                                .font(.subheadline)
+                                .foregroundStyle(AppColors.textPrimary)
+                            Text(historyErrorMessage)
+                                .font(.caption)
+                                .foregroundStyle(AppColors.textSecondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding(.vertical, 40)
                     } else if messages.isEmpty {
                         VStack(spacing: 10) {
                             Image(systemName: "bubble.left.and.bubble.right")
@@ -269,10 +299,28 @@ struct AgentChatView: View {
                 .padding(16)
             }
             .scrollIndicators(.hidden)
+            .onAppear {
+                scrollToBottom(proxy, animated: false)
+            }
             .onChange(of: messages.count) { _, _ in
+                scrollToBottom(proxy)
+            }
+            .onChange(of: isLoadingHistory) { _, loading in
+                if !loading {
+                    scrollToBottom(proxy, animated: false)
+                }
+            }
+        }
+    }
+
+    private func scrollToBottom(_ proxy: ScrollViewProxy, animated: Bool = true) {
+        DispatchQueue.main.async {
+            if animated {
                 withAnimation {
                     proxy.scrollTo("bottom", anchor: .bottom)
                 }
+            } else {
+                proxy.scrollTo("bottom", anchor: .bottom)
             }
         }
     }
@@ -320,6 +368,7 @@ struct AgentChatView: View {
                         RoundedRectangle(cornerRadius: 18)
                             .stroke(msg.role == .user ? Color.clear : AppColors.borderColor, lineWidth: 1)
                     )
+                    .textSelection(.enabled)
 
                 HStack(spacing: 4) {
                     Text(msg.timeString)
@@ -453,14 +502,51 @@ struct AgentChatView: View {
         isLoadingHistory = true
         defer { isLoadingHistory = false }
 
+        if AuthManager.shared.isDemoMode {
+            historyErrorMessage = nil
+            let demoMessages = DemoModeStore.shared.chatHistory(deviceId: deviceId, agentId: agentId, limit: 10).map {
+                ChatMessage(id: $0.id, role: $0.role, content: $0.content, time: $0.time, status: $0.status, inputType: $0.inputType)
+            }
+            messages = demoMessages
+            if let latestActivity = demoMessages.map(\.time).max(), Date().timeIntervalSince(latestActivity) <= 900 {
+                liveOnlineAgentIds.insert(agentId)
+            }
+            if isChatVisible {
+                await markAgentRead(agentId)
+            }
+            return
+        }
+
+        let cachedMessages = await ChatHistoryStore.shared.loadMessages(deviceId: deviceId, agentId: agentId, limit: 10)
+        if !cachedMessages.isEmpty {
+            historyErrorMessage = nil
+            messages = cachedMessages
+            await markAgentRead(agentId)
+            if let latestActivity = cachedMessages.map(\.time).max(),
+               Date().timeIntervalSince(latestActivity) <= 900 {
+                liveOnlineAgentIds.insert(agentId)
+            }
+        }
+
+        let shouldSync = await ChatHistoryStore.shared.shouldSync(
+            deviceId: deviceId,
+            agentId: agentId,
+            hasCache: !cachedMessages.isEmpty
+        )
+        if !shouldSync {
+            return
+        }
+
         do {
+            historyErrorMessage = nil
             let result: CommandListResponse = try await APIClient.shared.request(
                 .commands,
                 queryItems: [
                     URLQueryItem(name: "device_id", value: deviceId),
+                    URLQueryItem(name: "agent_id", value: agentId),
                     URLQueryItem(name: "command_type", value: "openclaw_message"),
                     URLQueryItem(name: "page", value: "1"),
-                    URLQueryItem(name: "page_size", value: "50"),
+                    URLQueryItem(name: "page_size", value: "10"),
                 ]
             )
 
@@ -494,12 +580,14 @@ struct AgentChatView: View {
                 }
             }
             messages = msgs
+            await ChatHistoryStore.shared.upsert(messages: msgs, deviceId: deviceId, agentId: agentId)
+            await ChatHistoryStore.shared.recordSync(deviceId: deviceId, agentId: agentId)
             await markAgentRead(agentId)
             if let latestActivity = msgs.map(\.time).max(), Date().timeIntervalSince(latestActivity) <= 900 {
                 liveOnlineAgentIds.insert(agentId)
             }
         } catch {
-            // Non-critical
+            historyErrorMessage = cachedMessages.isEmpty ? error.localizedDescription : nil
         }
     }
 
@@ -508,7 +596,7 @@ struct AgentChatView: View {
         let agentId = event.agentId.trimmingCharacters(in: .whitespaces)
         guard !agentId.isEmpty else { return }
 
-        let isActive = activeAgent?.id == agentId
+        let isActive = isChatVisible && activeAgent?.id == agentId
         liveOnlineAgentIds.insert(agentId)
         if isActive {
             unreadAgentIds.remove(agentId)
@@ -531,6 +619,7 @@ struct AgentChatView: View {
             } else {
                 unreadAgentIds.insert(agentId)
             }
+            Task { await ChatHistoryStore.shared.upsert(message: msg, deviceId: deviceId, agentId: agentId) }
         } else {
             let inputType: ChatMessage.InputType = (event.inputType == "voice") ? .voice : .text
             let msg = ChatMessage(
@@ -551,6 +640,7 @@ struct AgentChatView: View {
             } else {
                 unreadAgentIds.insert(agentId)
             }
+            Task { await ChatHistoryStore.shared.upsert(message: msg, deviceId: deviceId, agentId: agentId) }
         }
     }
 
@@ -562,11 +652,12 @@ struct AgentChatView: View {
         }
     }
 
-    private func updateUserStatus(commandId: Int64, status: Int8) {
+    @discardableResult
+    private func updateUserStatus(commandId: Int64, status: Int8) -> ChatMessage? {
         let userId = "user-\(commandId)"
-        guard let idx = messages.firstIndex(where: { $0.id == userId }) else { return }
+        guard let idx = messages.firstIndex(where: { $0.id == userId }) else { return nil }
         let old = messages[idx]
-        messages[idx] = ChatMessage(
+        let updated = ChatMessage(
             id: old.id,
             role: old.role,
             content: old.content,
@@ -574,6 +665,8 @@ struct AgentChatView: View {
             status: status,
             inputType: old.inputType
         )
+        messages[idx] = updated
+        return updated
     }
 
     private func isAgentOnline(_ agent: OpenClawAgent) -> Bool {
@@ -606,6 +699,26 @@ struct AgentChatView: View {
                     "input_type": inputType == .voice ? "voice" : "text",
                 ]
 
+                if AuthManager.shared.isDemoMode {
+                    guard let cmd = DemoModeStore.shared.sendCommand(deviceInternalId: deviceInternalId, commandType: .message, params: params) else {
+                        throw APIError.server(code: 500, message: "演示设备不存在")
+                    }
+                    liveOnlineAgentIds.insert(agent.id)
+                    ToastManager.shared.success("演示消息已发送")
+                    if let idx = messages.firstIndex(where: { $0.id == tempMsg.id }) {
+                        messages[idx] = ChatMessage(
+                            id: "user-\(cmd.id)",
+                            role: .user,
+                            content: text,
+                            time: cmd.createdAt,
+                            status: cmd.status,
+                            inputType: inputType
+                        )
+                    }
+                    await loadHistory(agentId: agent.id)
+                    return
+                }
+
                 let publicKey = try await fetchPublicKey()
                 let commandData = CommandPayload(commandType: "openclaw_message", params: params)
                 let envelopeJson = try E2ECrypto.sealJSON(commandData, publicKeyPEM: publicKey)
@@ -633,6 +746,18 @@ struct AgentChatView: View {
                         )
                     }
                 }
+                await ChatHistoryStore.shared.upsert(
+                    message: ChatMessage(
+                        id: "user-\(cmd.id)",
+                        role: .user,
+                        content: text,
+                        time: cmd.createdAt,
+                        status: cmd.status,
+                        inputType: inputType
+                    ),
+                    deviceId: deviceId,
+                    agentId: agent.id
+                )
 
                 Task {
                     await syncCommandResult(commandId: cmd.id)
@@ -656,6 +781,11 @@ struct AgentChatView: View {
     private func markAgentRead(_ agentId: String) async {
         let trimmed = agentId.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+        if AuthManager.shared.isDemoMode {
+            DemoModeStore.shared.markAgentRead(deviceId: deviceId, agentId: trimmed)
+            AgentUnreadStore.notifyDidChange()
+            return
+        }
         do {
             let body = MarkAgentReadBody(agentId: trimmed)
             try await APIClient.shared.requestVoid(.deviceAgentRead(id: deviceInternalId), body: body)
@@ -675,19 +805,32 @@ struct AgentChatView: View {
                 }
 
                 let finalStatus: Int8 = cmd.result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? cmd.status : 2
+                var updatedUserMessage: ChatMessage?
+                var replyMessage: ChatMessage?
                 await MainActor.run {
-                    updateUserStatus(commandId: commandId, status: finalStatus)
+                    updatedUserMessage = updateUserStatus(commandId: commandId, status: finalStatus)
                     let replyText = cmd.result.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !replyText.isEmpty {
-                        appendOrReplace(ChatMessage(
+                        let reply = ChatMessage(
                             id: "reply-\(commandId)",
                             role: .assistant,
                             content: replyText,
                             time: cmd.executedAt ?? cmd.updatedAt,
                             status: 2,
                             inputType: .text
-                        ))
+                        )
+                        appendOrReplace(reply)
+                        replyMessage = reply
                     }
+                }
+                if let agentId = activeAgent?.id {
+                    if let updatedUserMessage {
+                        await ChatHistoryStore.shared.upsert(message: updatedUserMessage, deviceId: deviceId, agentId: agentId)
+                    }
+                    if let replyMessage {
+                        await ChatHistoryStore.shared.upsert(message: replyMessage, deviceId: deviceId, agentId: agentId)
+                    }
+                    await ChatHistoryStore.shared.recordSync(deviceId: deviceId, agentId: agentId)
                 }
                 return
             } catch {

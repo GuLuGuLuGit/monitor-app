@@ -17,6 +17,7 @@ final class DeviceDetailViewModel {
     private(set) var isShowingStaleData = false
 
     private var refreshTimer: Timer?
+    private var didRetryMissingMetric = false
 
     init(device: Device) {
         self.deviceId = device.id
@@ -31,7 +32,15 @@ final class DeviceDetailViewModel {
         errorMessage = nil
 
         do {
-            let d: Device = try await APIClient.shared.request(.device(id: deviceId))
+            let d: Device
+            if AuthManager.shared.isDemoMode {
+                guard let demoDevice = DemoModeStore.shared.device(id: deviceId) else {
+                    throw APIError.server(code: 500, message: "演示设备不存在")
+                }
+                d = demoDevice
+            } else {
+                d = try await APIClient.shared.request(.device(id: deviceId))
+            }
             device = d
             isShowingStaleData = false
 
@@ -65,16 +74,22 @@ final class DeviceDetailViewModel {
 
     func loadSkills() async {
         do {
-            let result: SkillListResponse = try await APIClient.shared.request(
-                .skills,
-                queryItems: [
-                    URLQueryItem(name: "device_id", value: "\(deviceId)"),
-                    URLQueryItem(name: "page", value: "1"),
-                    URLQueryItem(name: "page_size", value: "100"),
-                ]
-            )
-            skills = result.items
-            skillTotal = result.pagination?.total ?? result.items.count
+            if AuthManager.shared.isDemoMode {
+                let result = DemoModeStore.shared.skills(deviceId: deviceId)
+                skills = result
+                skillTotal = result.count
+            } else {
+                let result: SkillListResponse = try await APIClient.shared.request(
+                    .skills,
+                    queryItems: [
+                        URLQueryItem(name: "device_id", value: "\(deviceId)"),
+                        URLQueryItem(name: "page", value: "1"),
+                        URLQueryItem(name: "page_size", value: "100"),
+                    ]
+                )
+                skills = result.items
+                skillTotal = result.pagination?.total ?? result.items.count
+            }
         } catch {
             if skills.isEmpty {
                 skillTotal = 0
@@ -89,17 +104,24 @@ final class DeviceDetailViewModel {
         formatter.formatOptions = [.withInternetDateTime]
 
         do {
-            let result: PagedData<SystemMetric> = try await APIClient.shared.request(
-                .metrics,
-                queryItems: [
-                    URLQueryItem(name: "device_id", value: "\(deviceId)"),
-                    URLQueryItem(name: "start_time", value: formatter.string(from: yesterday)),
-                    URLQueryItem(name: "end_time", value: formatter.string(from: now)),
-                    URLQueryItem(name: "page", value: "1"),
-                    URLQueryItem(name: "page_size", value: "288"),
-                ]
-            )
-            metrics = result.items.sorted { $0.metricTime < $1.metricTime }
+            if AuthManager.shared.isDemoMode {
+                metrics = DemoModeStore.shared.metrics(deviceId: deviceId).sorted { $0.metricTime < $1.metricTime }
+            } else {
+                let result: PagedData<SystemMetric> = try await APIClient.shared.request(
+                    .metrics,
+                    queryItems: [
+                        URLQueryItem(name: "device_id", value: "\(deviceId)"),
+                        URLQueryItem(name: "start_time", value: formatter.string(from: yesterday)),
+                        URLQueryItem(name: "end_time", value: formatter.string(from: now)),
+                        URLQueryItem(name: "page", value: "1"),
+                        URLQueryItem(name: "page_size", value: "288"),
+                    ]
+                )
+                metrics = result.items.sorted { $0.metricTime < $1.metricTime }
+            }
+            if !metrics.isEmpty || device?.latestMetric != nil {
+                didRetryMissingMetric = false
+            }
         } catch {
             print("[DeviceDetail] load metrics failed for device \(deviceId): \(error)")
         }
@@ -109,27 +131,33 @@ final class DeviceDetailViewModel {
         guard let deviceId = device?.deviceId, !deviceId.isEmpty else { return }
 
         do {
-            let result: CommandListResponse = try await APIClient.shared.request(
-                .commands,
-                queryItems: [
-                    URLQueryItem(name: "device_id", value: deviceId),
-                    URLQueryItem(name: "command_type", value: "openclaw_message"),
-                    URLQueryItem(name: "page", value: "1"),
-                    URLQueryItem(name: "page_size", value: "50"),
-                ]
-            )
+            let latestByAgent: [String: Date]
+            if AuthManager.shared.isDemoMode {
+                latestByAgent = DemoModeStore.shared.recentAgentActivity(deviceId: deviceId)
+            } else {
+                let result: CommandListResponse = try await APIClient.shared.request(
+                    .commands,
+                    queryItems: [
+                        URLQueryItem(name: "device_id", value: deviceId),
+                        URLQueryItem(name: "command_type", value: "openclaw_message"),
+                        URLQueryItem(name: "page", value: "1"),
+                        URLQueryItem(name: "page_size", value: "50"),
+                    ]
+                )
 
-            var latestByAgent: [String: Date] = [:]
-            for cmd in result.commands {
-                guard let agentId = cmd.commandParams?["agent_id"]?.value as? String,
-                      !agentId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                    continue
+                var map: [String: Date] = [:]
+                for cmd in result.commands {
+                    guard let agentId = cmd.commandParams?["agent_id"]?.value as? String,
+                          !agentId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                        continue
+                    }
+                    let activityAt = cmd.executedAt ?? cmd.updatedAt
+                    if let existing = map[agentId], existing >= activityAt {
+                        continue
+                    }
+                    map[agentId] = activityAt
                 }
-                let activityAt = cmd.executedAt ?? cmd.updatedAt
-                if let existing = latestByAgent[agentId], existing >= activityAt {
-                    continue
-                }
-                latestByAgent[agentId] = activityAt
+                latestByAgent = map
             }
             recentAgentActivity = latestByAgent
         } catch {
@@ -163,5 +191,17 @@ final class DeviceDetailViewModel {
 
     func clearError() {
         errorMessage = nil
+    }
+}
+
+
+extension DeviceDetailViewModel {
+    func reloadIfMissingMetric() async {
+        guard let device, device.status == 1 else { return }
+        guard metrics.isEmpty, device.latestMetric == nil, !didRetryMissingMetric else { return }
+        didRetryMissingMetric = true
+        try? await Task.sleep(nanoseconds: 3_000_000_000)
+        await load()
+        await loadMetrics()
     }
 }

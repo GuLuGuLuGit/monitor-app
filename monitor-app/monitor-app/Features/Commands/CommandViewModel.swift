@@ -24,8 +24,12 @@ final class CommandViewModel {
         }
 
         do {
-            let result: CommandListResponse = try await APIClient.shared.request(.commands, queryItems: queryItems)
-            commands = result.commands
+            if AuthManager.shared.isDemoMode {
+                commands = DemoModeStore.shared.commands(deviceId: deviceId ?? filterDeviceId)
+            } else {
+                let result: CommandListResponse = try await APIClient.shared.request(.commands, queryItems: queryItems)
+                commands = result.commands
+            }
         } catch let error as APIError {
             errorMessage = error.errorDescription
         } catch {
@@ -41,23 +45,29 @@ final class CommandViewModel {
         defer { isSending = false }
 
         do {
-            let publicKey = try await fetchPublicKey(deviceInternalId: deviceInternalId)
+            if AuthManager.shared.isDemoMode {
+                guard DemoModeStore.shared.sendCommand(deviceInternalId: deviceInternalId, commandType: commandType, params: params) != nil else {
+                    throw APIError.server(code: 500, message: "演示设备不存在")
+                }
+            } else {
+                let publicKey = try await fetchPublicKey(deviceInternalId: deviceInternalId)
 
-            let commandData = CommandPayload(commandType: commandType.rawValue, params: params)
-            let envelopeJson = try E2ECrypto.sealJSON(commandData, publicKeyPEM: publicKey)
+                let commandData = CommandPayload(commandType: commandType.rawValue, params: params)
+                let envelopeJson = try E2ECrypto.sealJSON(commandData, publicKeyPEM: publicKey)
 
-            let shouldPersistParams = (commandType == .message)
-            let persistedParams = shouldPersistParams ? params?.mapValues { AnyCodable($0) } : nil
+                let shouldPersistParams = (commandType == .message)
+                let persistedParams = shouldPersistParams ? params?.mapValues { AnyCodable($0) } : nil
 
-            let request = CreateEncryptedCommandRequest(
-                deviceId: deviceId,
-                commandType: commandType.rawValue,
-                commandParams: persistedParams,
-                encryptedPayload: envelopeJson,
-                isEncrypted: true
-            )
+                let request = CreateEncryptedCommandRequest(
+                    deviceId: deviceId,
+                    commandType: commandType.rawValue,
+                    commandParams: persistedParams,
+                    encryptedPayload: envelopeJson,
+                    isEncrypted: true
+                )
 
-            let _: AgentCommand = try await APIClient.shared.request(.createCommand, body: request)
+                let _: AgentCommand = try await APIClient.shared.request(.createCommand, body: request)
+            }
             await loadCommands(deviceId: deviceId)
             return true
         } catch let error as APIError {
@@ -73,7 +83,13 @@ final class CommandViewModel {
     func deleteCommand(_ id: Int64, deviceId: String? = nil) async -> Bool {
         errorMessage = nil
         do {
-            let _: CommandCleanupResponse = try await APIClient.shared.request(.deleteCommand(id: id))
+            if AuthManager.shared.isDemoMode {
+                guard DemoModeStore.shared.deleteCommand(id: id) else {
+                    throw APIError.server(code: 404, message: "命令不存在")
+                }
+            } else {
+                let _: CommandCleanupResponse = try await APIClient.shared.request(.deleteCommand(id: id))
+            }
             await loadCommands(deviceId: deviceId ?? filterDeviceId)
             return true
         } catch let error as APIError {
@@ -91,16 +107,26 @@ final class CommandViewModel {
     ) async -> Int64? {
         errorMessage = nil
         do {
-            let result: CommandCleanupResponse = try await APIClient.shared.request(
-                .cleanupCommands,
-                body: CommandCleanupRequest(
+            let deleted: Int64
+            if AuthManager.shared.isDemoMode {
+                deleted = DemoModeStore.shared.cleanupCommands(
                     deviceId: deviceId ?? filterDeviceId,
                     commandTypes: commandTypes,
                     statuses: statuses
                 )
-            )
+            } else {
+                let result: CommandCleanupResponse = try await APIClient.shared.request(
+                    .cleanupCommands,
+                    body: CommandCleanupRequest(
+                        deviceId: deviceId ?? filterDeviceId,
+                        commandTypes: commandTypes,
+                        statuses: statuses
+                    )
+                )
+                deleted = result.deleted
+            }
             await loadCommands(deviceId: deviceId ?? filterDeviceId)
-            return result.deleted
+            return deleted
         } catch let error as APIError {
             errorMessage = error.errorDescription
         } catch {

@@ -12,6 +12,7 @@ enum APIEndpoint {
     case resetPassword
     case refreshToken
     case me
+    case deleteAccount
     case wsTicket
 
     // Dashboard
@@ -57,6 +58,7 @@ enum APIEndpoint {
         case .resetPassword:            "/admin/auth/reset-password"
         case .refreshToken:             "/admin/auth/refresh"
         case .me:                       "/admin/auth/me"
+        case .deleteAccount:            "/admin/auth/me"
         case .wsTicket:                 "/admin/ws-ticket"
         case .dashboard:                "/admin/dashboard"
         case .devices:                  "/admin/devices"
@@ -86,7 +88,7 @@ enum APIEndpoint {
             .POST
         case .deviceStatus:
             .PUT
-        case .deleteDevice, .deleteCommand:
+        case .deleteAccount, .deleteDevice, .deleteCommand:
             .DELETE
         default:
             .GET

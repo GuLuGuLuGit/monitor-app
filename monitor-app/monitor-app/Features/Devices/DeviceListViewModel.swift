@@ -45,14 +45,18 @@ final class DeviceListViewModel {
         errorMessage = nil
 
         do {
-            let result: PagedData<Device> = try await APIClient.shared.request(
-                .devices,
-                queryItems: [
-                    URLQueryItem(name: "page", value: "1"),
-                    URLQueryItem(name: "page_size", value: "100"),
-                ]
-            )
-            devices = result.items
+            if AuthManager.shared.isDemoMode {
+                devices = DemoModeStore.shared.devices()
+            } else {
+                let result: PagedData<Device> = try await APIClient.shared.request(
+                    .devices,
+                    queryItems: [
+                        URLQueryItem(name: "page", value: "1"),
+                        URLQueryItem(name: "page_size", value: "100"),
+                    ]
+                )
+                devices = result.items
+            }
             isShowingStaleData = false
             hasLoadedOnce = true
             WidgetSnapshotStore.save(devices: devices)
@@ -71,7 +75,11 @@ final class DeviceListViewModel {
     func updateDeviceStatus(device: Device, newStatus: Int8) async -> Bool {
         struct StatusBody: Encodable { let status: Int8 }
         do {
-            try await APIClient.shared.requestVoid(.deviceStatus(id: device.id), body: StatusBody(status: newStatus))
+            if AuthManager.shared.isDemoMode {
+                _ = DemoModeStore.shared.updateDeviceStatus(id: device.id, status: newStatus)
+            } else {
+                try await APIClient.shared.requestVoid(.deviceStatus(id: device.id), body: StatusBody(status: newStatus))
+            }
             await load()
             return true
         } catch {
@@ -82,7 +90,11 @@ final class DeviceListViewModel {
 
     func deleteDevice(_ device: Device) async -> Bool {
         do {
-            try await APIClient.shared.requestVoid(.deleteDevice(id: device.id))
+            if AuthManager.shared.isDemoMode {
+                DemoModeStore.shared.deleteDevice(id: device.id)
+            } else {
+                try await APIClient.shared.requestVoid(.deleteDevice(id: device.id))
+            }
             devices.removeAll { $0.id == device.id }
             WidgetSnapshotStore.save(devices: devices)
             return true

@@ -42,4 +42,11 @@ final class LoginViewModel {
             username = saved
         }
     }
+
+    func useDemoAccount() {
+        username = AuthManager.demoUsername
+        password = AuthManager.demoPassword
+        rememberLogin = false
+        errorMessage = nil
+    }
 }

@@ -1,12 +1,19 @@
 import SwiftUI
 
+extension Notification.Name {
+    static let deviceDataShouldRefresh = Notification.Name("deviceDataShouldRefresh")
+}
+
+
 struct DeviceListView: View {
     private let topContentSpacing: CGFloat = 8
     @State private var viewModel = DeviceListViewModel()
     @State private var showPairing = false
     @State private var selectedDevice: Device?
     @State private var activeLane: WorkLane?
+    @State private var authManager = AuthManager.shared
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.scenePhase) private var scenePhase
 
     private enum DeviceFilter {
         case all
@@ -103,6 +110,14 @@ struct DeviceListView: View {
         .onReceive(NotificationCenter.default.publisher(for: AgentUnreadStore.didChangeNotification)) { _ in
             Task { await viewModel.load() }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .deviceDataShouldRefresh)) { _ in
+            Task { await viewModel.load() }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                Task { await viewModel.load() }
+            }
+        }
         .onDisappear {
             viewModel.stopAutoRefresh()
         }
@@ -117,10 +132,14 @@ struct DeviceListView: View {
             .navigationTitle("设备")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { pairingButton }
+                ToolbarItem(placement: .topBarLeading) {
+                    if !authManager.isDemoMode {
+                        pairingButton
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) { filterMenu }
             }
-            .sheet(isPresented: $showPairing) { PairingView() }
+            .sheet(isPresented: $showPairing, onDismiss: { Task { await viewModel.load() } }) { PairingView() }
         } detail: {
             ZStack {
                 AppColors.gradientBg.ignoresSafeArea()
@@ -192,10 +211,14 @@ struct DeviceListView: View {
             .navigationTitle("设备")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { pairingButton }
+                ToolbarItem(placement: .topBarLeading) {
+                    if !authManager.isDemoMode {
+                        pairingButton
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) { filterMenu }
             }
-            .sheet(isPresented: $showPairing) { PairingView() }
+            .sheet(isPresented: $showPairing, onDismiss: { Task { await viewModel.load() } }) { PairingView() }
             .navigationDestination(for: Device.self) { device in
                 DeviceDetailView(device: device)
             }
@@ -218,17 +241,6 @@ struct DeviceListView: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Spacer()
-                    if activeLane != nil {
-                        Button("全部") {
-                            self.activeLane = nil
-                        }
-                        .font(.caption2)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(AppColors.primary)
-                    }
-                }
                 HStack(spacing: 10) {
                     laneCard(.alerts, count: alertCount, detail: "异常")
                     laneCard(.unread, count: unreadCount, detail: "未读")
@@ -311,6 +323,9 @@ struct DeviceListView: View {
                     filterChip(.online)
                     filterChip(.offline)
                     filterChip(.disabled)
+                    if let activeLane {
+                        laneFilterChip(activeLane)
+                    }
                 }
                 .padding(.vertical, 2)
             }
@@ -381,6 +396,30 @@ struct DeviceListView: View {
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
                     .stroke(isActive ? accent.opacity(0.35) : AppColors.borderColor, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func laneFilterChip(_ lane: WorkLane) -> some View {
+        let accent = laneAccent(lane)
+        return Button {
+            activeLane = nil
+        } label: {
+            HStack(spacing: 6) {
+                Text(lane.title)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .bold))
+            }
+            .foregroundStyle(accent)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(accent.opacity(0.12))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule().stroke(accent.opacity(0.25), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)

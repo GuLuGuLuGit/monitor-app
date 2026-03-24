@@ -21,6 +21,7 @@ struct DeviceDetailView: View {
     @State private var showDeleteConfirm = false
     @State private var selectedTab: WorkspaceTab = .agents
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
     init(device: Device) {
         self.device = device
@@ -77,7 +78,9 @@ struct DeviceDetailView: View {
                                 viewModel.clearError()
                             }
                         }
-                        deviceStatusBanner
+                        if deviceStatusSummary.label != "正常" {
+                            deviceStatusBanner
+                        }
                         tabBar
                         workspaceContent
                     }
@@ -134,6 +137,17 @@ struct DeviceDetailView: View {
         .onReceive(NotificationCenter.default.publisher(for: AgentUnreadStore.didChangeNotification)) { _ in
             Task { await viewModel.load() }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .deviceDataShouldRefresh)) { _ in
+            Task { await reloadAll() }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                Task { await reloadAll() }
+            }
+        }
+        .task(id: latestMetric?.metricTime) {
+            await viewModel.reloadIfMissingMetric()
+        }
         .onDisappear {
             viewModel.stopAutoRefresh()
         }
@@ -149,7 +163,11 @@ struct DeviceDetailView: View {
     private func toggleStatus(to newStatus: Int8) async {
         struct StatusBody: Encodable { let status: Int8 }
         do {
-            try await APIClient.shared.requestVoid(.deviceStatus(id: currentDevice.id), body: StatusBody(status: newStatus))
+            if AuthManager.shared.isDemoMode {
+                _ = DemoModeStore.shared.updateDeviceStatus(id: currentDevice.id, status: newStatus)
+            } else {
+                try await APIClient.shared.requestVoid(.deviceStatus(id: currentDevice.id), body: StatusBody(status: newStatus))
+            }
             await viewModel.load()
         } catch {}
     }

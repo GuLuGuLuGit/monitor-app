@@ -9,41 +9,51 @@ struct CommandPanelView: View {
     @State private var paramSheetType: AgentCommand.CommandType?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            ForEach(AgentCommand.CommandGroup.allCases, id: \.rawValue) { group in
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text(group.label)
-                            .font(.headline)
-                            .foregroundStyle(AppColors.textTitle)
-                        Spacer()
-                        Text("\(group.types.count) 项")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(AppColors.textSecondary)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(Color.white.opacity(0.28))
-                            .clipShape(Capsule())
-                    }
+        ZStack {
+            VStack(alignment: .leading, spacing: 16) {
+                ForEach(AgentCommand.CommandGroup.allCases, id: \.rawValue) { group in
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text(group.label)
+                                .font(.headline)
+                                .foregroundStyle(AppColors.textTitle)
+                            Spacer()
+                            Text("\(group.types.count) 项")
+                                .font(.caption2)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(AppColors.textSecondary)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Color.white.opacity(0.28))
+                                .clipShape(Capsule())
+                        }
 
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                        ForEach(group.types.filter(\.isVisibleInCommandPanel), id: \.rawValue) { cmdType in
-                            commandButton(cmdType)
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                            ForEach(group.types.filter(\.isVisibleInCommandPanel), id: \.rawValue) { cmdType in
+                                commandButton(cmdType)
+                            }
                         }
                     }
+
+                    if group != AgentCommand.CommandGroup.allCases.last {
+                        Divider()
+                            .background(AppColors.borderColor)
+                            .padding(.top, 4)
+                    }
                 }
-                if group != AgentCommand.CommandGroup.allCases.last {
-                    Divider()
-                        .background(AppColors.borderColor)
-                        .padding(.top, 4)
+
+                if let error = viewModel.errorMessage {
+                    ErrorBanner(message: error) {
+                        viewModel.errorMessage = nil
+                    }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-            if let error = viewModel.errorMessage {
-                ErrorBanner(message: error) {
-                    viewModel.errorMessage = nil
-                }
+            if viewModel.isSending {
+                LoadingOverlay(message: "发送中")
+                    .frame(maxWidth: .infinity, minHeight: 420, maxHeight: .infinity, alignment: .center)
+                    .zIndex(1)
             }
         }
         .alert("确认执行", isPresented: $showConfirm) {
@@ -83,11 +93,6 @@ struct CommandPanelView: View {
                 showConfirm = true
             }
             .presentationDetents([.medium])
-        }
-        .overlay {
-            if viewModel.isSending {
-                LoadingOverlay(message: "发送中")
-            }
         }
         .onChange(of: viewModel.errorMessage) { _, newValue in
             guard let newValue, !newValue.isEmpty, !viewModel.isSending else { return }
